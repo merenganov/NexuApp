@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:orientation="vertical"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:padding="24dp"
+             android:background="@drawable/login_gradient">
+    <TextView
+        android:id="@+id/signinTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Signin"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_gravity="center"
+        android:paddingBottom="32dp"/>
+
+
+
+    <!-- Nombre -->
+    <EditText
+        android:id="@+id/nameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nombre"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#888888"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Correo institucional -->
+    <EditText
+        android:id="@+id/emailInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Correo institucional"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#888888"
+        android:inputType="textEmailAddress"
+        android:backgroundTint="#FFFFFF"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Contraseña -->
+    <EditText
+        android:id="@+id/passwordInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Contraseña"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#888888"
+        android:inputType="textPassword"
+        android:backgroundTint="#FFFFFF"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Confirmación de contraseña -->
+    <EditText
+        android:id="@+id/confirmPasswordInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Confirmar Contraseña"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#888888"
+        android:inputType="textPassword"
+        android:backgroundTint="#FFFFFF"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Botón Finalizar -->
+    <Button
+        android:id="@+id/finalizeButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Finalizar"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#13ce83"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="32dp" />
+
+</LinearLayout>
