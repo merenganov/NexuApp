@@ -3,15 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#0D0D0D"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:background="@drawable/login_gradient">
 
     <!-- Título -->
     <TextView
         android:id="@+id/loginTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Sign In"
+        android:text="Bienvenido"
         android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="#FFFFFF"
@@ -23,9 +23,9 @@
         android:id="@+id/emailInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Usuario"
+        android:hint="Correo institucional"
         android:textColor="#FFFFFF"
-        android:textColorHint="#888888"
+        android:textColorHint="#FFFFFF"
         android:inputType="textEmailAddress"
         android:backgroundTint="#3A3A3A"
         android:layout_marginBottom="16dp" />
@@ -37,7 +37,7 @@
         android:layout_height="wrap_content"
         android:hint="Contraseña"
         android:textColor="#FFFFFF"
-        android:textColorHint="#888888"
+        android:textColorHint="#FFFFFF"
         android:inputType="textPassword"
         android:backgroundTint="#3A3A3A"
         android:layout_marginBottom="24dp" />
@@ -49,18 +49,18 @@
         android:layout_height="wrap_content"
         android:text="Log in"
         android:textColor="#FFFFFF"
-        android:backgroundTint="#0056D2"
+        android:backgroundTint="#13ce83"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="32dp" />
 
     <!-- Opción de registro -->
-    <TextView
-        android:id="@+id/registerRedirect"
-        android:layout_width="wrap_content"
+    <Button
+        android:id="@+id/signinButton"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="¿No tienes cuenta? Registrate"
-        android:textColor="#AAAAAA"
-        android:textSize="14sp"
-        android:layout_gravity="center" />
-
+        android:text="Sign In"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#13ce83"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="32dp" />
 </LinearLayout>

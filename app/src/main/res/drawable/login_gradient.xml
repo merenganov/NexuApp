@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Definir el fondo gradiente -->
+    <gradient
+        android:startColor="#050d31"
+    android:endColor="#0b5457"
+    android:angle="45" />
+
+    <!-- Opcional: Redondear bordes (si se desea) -->
+    <corners android:radius="16dp" />  <!-- Bordes redondeados -->
+</shape>
