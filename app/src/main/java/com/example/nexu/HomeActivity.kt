@@ -1,6 +1,8 @@
 package com.example.nexu
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
@@ -18,5 +20,15 @@ class HomeActivity : AppCompatActivity() {
 
         // Colocar el mensaje personalizado
         welcomeText.text = "Bienvenid@ $username"
+
+        val profileSection: LinearLayout = findViewById(R.id.profileSection)
+
+        profileSection.setOnClickListener {
+            val email = intent.getStringExtra("email") ?: ""
+            val intent = Intent(this, ProfileActivity::class.java)
+            intent.putExtra("email", email)
+            startActivity(intent)
+        }
+
     }
 }
