@@ -58,7 +58,7 @@
             android:id="@+id/txtMensaje"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Termina de completar tu perfil"
+            android:text="Cuentanos sobre ti...."
             android:textSize="18sp"
             android:textColor="@color/textPrimaryBlue"
             android:layout_marginTop="20dp" />
@@ -80,6 +80,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Carrera"
+            android:textColorHint="@color/black"
             android:textColor="@color/black"
             android:enabled="false"/>
 
@@ -90,6 +91,7 @@
             android:layout_height="wrap_content"
             android:hint="Descripción"
             android:enabled="false"
+            android:textColorHint="@color/black"
             android:textColor="@color/black"
             android:minLines="3"/>
 
@@ -107,6 +109,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:hint="Fecha de nacimiento"
+                android:textColorHint="@color/black"
                 android:textColor="@color/black"
                 android:enabled="false"/>
 
@@ -117,6 +120,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
                 android:hint="Género"
+                android:textColorHint="@color/black"
                 android:textColor="@color/black"
                 android:enabled="false"/>
         </LinearLayout>
@@ -127,6 +131,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Atributos"
+            android:textColorHint="@color/black"
             android:textColor="@color/black"
             android:enabled="false"/>
 

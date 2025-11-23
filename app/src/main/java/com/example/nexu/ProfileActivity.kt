@@ -69,17 +69,16 @@ class ProfileActivity : AppCompatActivity() {
         edtAtributos.setText(atributos)
 
         // Mostrar mensaje si todo está vacío
-        val perfilCompleto = carrera.isNotEmpty() &&
-                descripcion.isNotEmpty() &&
-                fecha.isNotEmpty() &&
-                genero.isNotEmpty() &&
-                atributos.isNotEmpty()
+        val perfilIncompleto =
+            carrera.isBlank() ||
+                    descripcion.isBlank() ||
+                    fecha.isBlank() ||
+                    genero.isBlank() ||
+                    atributos.isBlank()
 
-        if (perfilCompleto) {
-            msgCompletar.visibility = View.GONE
-        } else {
-            msgCompletar.visibility = View.VISIBLE
-        }
+        msgCompletar.visibility = if (perfilIncompleto) View.VISIBLE else View.GONE
+
+
 
         // ========================================
         // DESACTIVAR EDICIÓN AL INICIO
@@ -120,9 +119,16 @@ class ProfileActivity : AppCompatActivity() {
             setEditable(false, edtCarrera, edtDescripcion, edtFecha, edtGenero, edtAtributos)
 
             // Ocultar mensaje si ya tiene datos
-            msgCompletar.visibility =
-                if (newCarrera.isEmpty() && newDescripcion.isEmpty() && newFecha.isEmpty() && newGenero.isEmpty() && newAtributos.isEmpty())
-                    View.VISIBLE else View.GONE
+            val perfilIncompletoFinal =
+                newCarrera.isBlank() ||
+                        newDescripcion.isBlank() ||
+                        newFecha.isBlank() ||
+                        newGenero.isBlank() ||
+                        newAtributos.isBlank()
+
+            msgCompletar.visibility = if (perfilIncompletoFinal) View.VISIBLE else View.GONE
+
+
         }
     }
 
