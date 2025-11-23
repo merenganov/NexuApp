@@ -7,4 +7,18 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="oxford_blue">#050D31</color>
+    <color name="midnight_green">#0B5457</color>
+    <color name="zomp">#119B7D</color>
+    <color name="emerald">#13CE83</color>
+    <color name="hint_gray">#999999</color>
+
+    <color name="pastelPink">#FBE4EC</color>
+    <color name="pastelBlue">#EDEDF7</color>
+    <color name="textPrimaryBlue">#0A2A5E</color>
+    <color name="iconBlue">#0D2B66</color>
+
+
+
 </resources>

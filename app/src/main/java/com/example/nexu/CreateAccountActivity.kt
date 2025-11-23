@@ -22,13 +22,13 @@ class CreateAccountActivity : AppCompatActivity() {
             val password = findViewById<EditText>(R.id.passwordInput).text.toString()
             val confirmPassword = findViewById<EditText>(R.id.confirmPasswordInput).text.toString()
 
-            // Validar correo
+            // Validar correo institucional
             if (!isEmailValid(email)) {
                 Toast.makeText(this, "Correo inválido, debe terminar con @edu.uaa.mx", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            // Validar contraseñas
+            // Validar contraseñas iguales
             if (!arePasswordsMatching(password, confirmPassword)) {
                 Toast.makeText(this, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -37,30 +37,34 @@ class CreateAccountActivity : AppCompatActivity() {
             // Guardar datos en SharedPreferences
             saveUserData(name, email, password)
 
-            // Redirigir a la pantalla principal
-            val intent = Intent(this, LoginActivity ::class.java)
+            // Volver al Login
+            val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
         }
     }
 
-    // Función para validar el correo
+    // Validación de correo institucional
     private fun isEmailValid(email: String): Boolean {
-        val emailPattern = "[a-zA-Z0-9._-]+@edu.uaa.mx"  // Solo permite correos @edu.uaa.mx
+        val emailPattern = "[a-zA-Z0-9._-]+@edu.uaa.mx"
         return email.matches(emailPattern.toRegex())
     }
 
-    // Función para validar que las contraseñas coincidan
+    // Validación de contraseñas
     private fun arePasswordsMatching(password: String, confirmPassword: String): Boolean {
         return password == confirmPassword
     }
 
-    // Guardar datos de usuario en SharedPreferences
+    // Guardar usuario en SharedPreferences (FORMATO CORRECTO)
     private fun saveUserData(name: String, email: String, password: String) {
-        val sharedPreferences: SharedPreferences = getSharedPreferences("UserPreferences", MODE_PRIVATE)
+        val sharedPreferences: SharedPreferences = getSharedPreferences("NexuUsers", MODE_PRIVATE)
         val editor = sharedPreferences.edit()
-        editor.putString("user_name", name)
-        editor.putString("user_email", email)
-        editor.putString("user_password", password)
+
+        // Guardar en formato: "nombre#contraseña"
+        val userData = "$name#$password"
+
+        // La clave será el email (IMPORTANTE)
+        editor.putString(email, userData)
+
         editor.apply()
     }
 }
