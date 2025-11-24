@@ -1,5 +1,6 @@
 package com.example.nexu
 
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
@@ -10,6 +11,7 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
     private lateinit var email: String
+    
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +21,8 @@ class ProfileActivity : AppCompatActivity() {
 
         // Traemos el email del usuario actual
         email = intent.getStringExtra("email") ?: ""
+
+
 
         // Referencias UI
         val txtNombre = findViewById<TextView>(R.id.txtNombre)
@@ -130,6 +134,13 @@ class ProfileActivity : AppCompatActivity() {
 
 
         }
+        val navHome = findViewById<LinearLayout>(R.id.navHome)
+        navHome.setOnClickListener {
+            val intent = Intent(this, HomeActivity::class.java)
+            startActivity(intent)
+        }
+        //val navMessages = findViewById<LinearLayout>(R.id.navMessages)
+        //val navProfile = findViewById<LinearLayout>(R.id.navProfile)
     }
 
     // Función para activar/desactivar edición

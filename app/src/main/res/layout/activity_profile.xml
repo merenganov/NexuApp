@@ -1,150 +1,232 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@drawable/home_gradient">
 
-    <LinearLayout
-        android:orientation="vertical"
-        android:padding="24dp"
+    <!-- SCROLLVIEW (solo 1 hijo permitido) -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <TextView
-            android:id="@+id/msgCompletar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Termina de completar tu perfil"
-            android:textSize="20sp"
-            android:textColor="@color/textPrimaryBlue"
-            android:layout_marginTop="16dp"
-            android:padding="4dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-
-        <!-- FOTO + BOTÓN EDITAR -->
         <LinearLayout
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:padding="24dp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <ImageView
-                android:id="@+id/imgPerfil"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_profile" />
+            <!-- MENSAJE COMPLETAR PERFIL -->
             <TextView
-                android:id="@+id/txtNombreHeader"
+                android:id="@+id/msgCompletar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Usuario"
-                android:textSize="22sp"
+                android:text="Termina de completar tu perfil"
+                android:textSize="20sp"
+                android:textColor="@color/textPrimaryBlue"
+                android:layout_marginTop="16dp"
+                android:padding="4dp" />
+
+            <!-- FOTO + NOMBRE HEADER + BOTÓN EDITAR -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/imgPerfil"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/ic_profile" />
+
+                <TextView
+                    android:id="@+id/txtNombreHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Usuario"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/textPrimaryBlue"
+                    android:layout_marginStart="16dp"/>
+
+                <Button
+                    android:id="@+id/btnEditar"
+                    android:layout_width="120dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="32dp"
+                    android:text="EDITAR"
+                    android:backgroundTint="@color/textPrimaryBlue"
+                    android:textColor="@color/white" />
+
+
+            </LinearLayout>
+
+            <!-- Cuentanos -->
+            <TextView
+                android:id="@+id/txtMensaje"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cuéntanos sobre ti..."
+                android:textSize="18sp"
+                android:textColor="@color/textPrimaryBlue"
+                android:layout_marginTop="20dp" />
+
+            <!-- Nombre (NO editable) -->
+            <TextView
+                android:id="@+id/txtNombre"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nombre"
                 android:textStyle="bold"
                 android:textColor="@color/textPrimaryBlue"
-                android:layout_marginTop="8dp"/>
+                android:layout_marginTop="24dp"/>
 
+            <!-- CARRERA -->
+            <EditText
+                android:id="@+id/edtCarrera"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Carrera"
+                android:textColorHint="@color/black"
+                android:textColor="@color/black"
+                android:enabled="false"/>
 
+            <!-- DESCRIPCIÓN -->
+            <EditText
+                android:id="@+id/edtDescripcion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Descripción"
+                android:enabled="false"
+                android:textColorHint="@color/black"
+                android:textColor="@color/black"
+                android:minLines="3"/>
+
+            <!-- FECHA Y GÉNERO -->
+            <LinearLayout
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center">
+
+                <EditText
+                    android:id="@+id/edtFecha"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="Fecha de nacimiento"
+                    android:textColorHint="@color/black"
+                    android:textColor="@color/black"
+                    android:enabled="false"/>
+
+                <EditText
+                    android:id="@+id/edtGenero"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:hint="Género"
+                    android:textColorHint="@color/black"
+                    android:textColor="@color/black"
+                    android:enabled="false"/>
+            </LinearLayout>
+
+            <!-- ATRIBUTOS -->
+            <EditText
+                android:id="@+id/edtAtributos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Atributos"
+                android:textColorHint="@color/black"
+                android:textColor="@color/black"
+                android:enabled="false"/>
+
+            <!-- BOTÓN FINALIZAR -->
             <Button
-                android:id="@+id/btnEditar"
-                android:layout_width="120dp"
+                android:id="@+id/btnFinalizar"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="32dp"
-                android:text="EDITAR"
+                android:layout_marginTop="32dp"
+                android:text="FINALIZAR"
                 android:backgroundTint="@color/textPrimaryBlue"
-                android:textColor="@color/white" />
+                android:textColor="@color/white"
+                android:visibility="gone"/>
         </LinearLayout>
+    </ScrollView>
 
-        <!-- MENSAJE -->
-        <TextView
-            android:id="@+id/txtMensaje"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Cuentanos sobre ti...."
-            android:textSize="18sp"
-            android:textColor="@color/textPrimaryBlue"
-            android:layout_marginTop="20dp" />
+    <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+    <LinearLayout
+        android:id="@+id/bottomNavProfile"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@color/white"
+        android:padding="8dp">
 
-        <!-- CAMPOS -->
-        <!-- NOMBRE -->
-        <TextView
-            android:id="@+id/txtNombre"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Nombre"
-            android:textStyle="bold"
-            android:textColor="@color/textPrimaryBlue"
-            android:layout_marginTop="24dp"/>
-
-        <!-- Carrera -->
-        <EditText
-            android:id="@+id/edtCarrera"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Carrera"
-            android:textColorHint="@color/black"
-            android:textColor="@color/black"
-            android:enabled="false"/>
-
-        <!-- Descripción -->
-        <EditText
-            android:id="@+id/edtDescripcion"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Descripción"
-            android:enabled="false"
-            android:textColorHint="@color/black"
-            android:textColor="@color/black"
-            android:minLines="3"/>
-
-        <!-- Fecha y género -->
+        <!-- HOME -->
         <LinearLayout
-            android:orientation="horizontal"
-            android:layout_width="match_parent"
+            android:id="@+id/navHome"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:textColor="@color/black"
+            android:layout_weight="1"
+            android:orientation="vertical"
             android:gravity="center">
-
-            <EditText
-                android:id="@+id/edtFecha"
-                android:layout_width="0dp"
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_home"/>
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Fecha de nacimiento"
-                android:textColorHint="@color/black"
+                android:text="Inicio"
                 android:textColor="@color/black"
-                android:enabled="false"/>
-
-            <EditText
-                android:id="@+id/edtGenero"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:hint="Género"
-                android:textColorHint="@color/black"
-                android:textColor="@color/black"
-                android:enabled="false"/>
+                android:textSize="14sp"/>
         </LinearLayout>
 
-        <!-- Atributos -->
-        <EditText
-            android:id="@+id/edtAtributos"
-            android:layout_width="match_parent"
+        <!-- MENSAJES -->
+        <LinearLayout
+            android:id="@+id/navMessages"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:hint="Atributos"
-            android:textColorHint="@color/black"
-            android:textColor="@color/black"
-            android:enabled="false"/>
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_message"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mensajes"
+                android:textColor="@color/black"
+                android:textSize="14sp"/>
+        </LinearLayout>
 
-        <!-- BOTÓN FINALIZAR (OCULTO) -->
-        <Button
-            android:id="@+id/btnFinalizar"
-            android:layout_width="match_parent"
+        <!-- PERFIL -->
+        <LinearLayout
+            android:id="@+id/navProfile"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:text="FINALIZAR"
-            android:backgroundTint="@color/textPrimaryBlue"
-            android:textColor="@color/white"
-            android:visibility="gone"/>
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_profil"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Perfil"
+                android:textColor="@color/black"
+                android:textSize="14sp"/>
+        </LinearLayout>
+
     </LinearLayout>
 
-</ScrollView>
+</LinearLayout>
+
