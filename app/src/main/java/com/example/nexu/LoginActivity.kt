@@ -56,6 +56,9 @@ class LoginActivity : AppCompatActivity() {
 
             // === LOGIN EXITOSO ===
             Toast.makeText(this, "Bienvenido $storedName", Toast.LENGTH_SHORT).show()
+            // Guardar el usuario actual para usar en toda la app
+            sharedPref.edit().putString("currentUser", email).apply()
+
 
             val homeIntent = Intent(this, HomeActivity::class.java)
             homeIntent.putExtra("username", storedName)

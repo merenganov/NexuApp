@@ -17,7 +17,19 @@ class HomeActivity : AppCompatActivity() {
         ThemeManager.applyThemeBackground(this, root)
 
         // Obtener el nombre enviado desde LoginActivity
-        val username = intent.getStringExtra("username") ?: "Usuario"
+        //val username = intent.getStringExtra("username") ?: "Usuario"
+        val sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
+        val email = sharedPref.getString("currentUser", null) ?: ""
+
+        // Obtener datos guardados del usuario
+        val data = sharedPref.getString(email, null)
+
+        var username = "Usuario"
+
+        if (data != null) {
+            val parts = data.split("#")
+            username = parts.getOrNull(0) ?: "Usuario"
+        }
 
         // Referencia al TextView
         val welcomeText: TextView = findViewById(R.id.welcomeText)

@@ -24,7 +24,9 @@ class ProfileActivity : AppCompatActivity() {
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
 
         // Traemos el email del usuario actual
-        email = intent.getStringExtra("email") ?: ""
+       // email = intent.getStringExtra("email") ?: ""
+
+        email = sharedPref.getString("currentUser", null) ?: ""
 
 
 
@@ -197,6 +199,7 @@ class ProfileActivity : AppCompatActivity() {
         navHome.setOnClickListener {
             val intent = Intent(this, HomeActivity::class.java)
             startActivity(intent)
+            finish()
 
         }
         //val navMessages = findViewById<LinearLayout>(R.id.navMessages)
