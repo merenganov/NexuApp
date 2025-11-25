@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class ProfileActivity : AppCompatActivity() {
@@ -16,6 +17,9 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+
+        val root = findViewById<View>(android.R.id.content)
+        ThemeManager.applyThemeBackground(this, root)
 
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
 
@@ -134,10 +138,66 @@ class ProfileActivity : AppCompatActivity() {
 
 
         }
+        val btnMenu = findViewById<ImageView>(R.id.btnMenu)
+
+        btnMenu.setOnClickListener {
+            val popup = PopupMenu(this, btnMenu)
+            popup.menuInflater.inflate(R.menu.menu_profile, popup.menu)
+
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.opCuenta -> { /* acción */ }
+                    R.id.opTema -> { val dialog = AlertDialog.Builder(this).create()
+                        val view = layoutInflater.inflate(R.layout.theme_selector, null)
+
+                        val switchTema = view.findViewById<Switch>(R.id.switchTema)
+                        val imgTema = view.findViewById<ImageView>(R.id.imgTema)
+                        val txtTema = view.findViewById<TextView>(R.id.txtTema)
+
+                        val isDark = ThemeManager.isDark(this)
+                        switchTema.isChecked = isDark
+
+                        imgTema.setImageResource(if (isDark) R.drawable.ic_moon else R.drawable.ic_sun)
+                        txtTema.text = if (isDark) "Modo claro" else "Modo oscuro"
+
+                        switchTema.setOnCheckedChangeListener { _, checked ->
+                            ThemeManager.setDark(this, checked)
+                            dialog.dismiss()
+                            recreate() // vuelve a pintar la pantalla
+                        }
+
+                        dialog.setView(view)
+                        dialog.show() }
+                    R.id.opCerrar -> { val builder = AlertDialog.Builder(this)
+                        builder.setTitle("Cerrar sesión")
+                        builder.setMessage("¿Estás seguro de que deseas cerrar sesión?")
+
+                        builder.setPositiveButton("Sí") { dialog, _ ->
+                            val intent = Intent(this, LoginActivity::class.java)
+                            startActivity(intent)
+                            finish() // Evitar volver atrás
+                            dialog.dismiss()
+                        }
+
+                        builder.setNegativeButton("No") { dialog, _ ->
+                            dialog.dismiss() // Solo cierra el mensaje
+                        }
+
+                        val dialog = builder.create()
+                        dialog.show() }
+
+                }
+                true
+            }
+
+            popup.show()
+        }
+
         val navHome = findViewById<LinearLayout>(R.id.navHome)
         navHome.setOnClickListener {
             val intent = Intent(this, HomeActivity::class.java)
             startActivity(intent)
+
         }
         //val navMessages = findViewById<LinearLayout>(R.id.navMessages)
         //val navProfile = findViewById<LinearLayout>(R.id.navProfile)

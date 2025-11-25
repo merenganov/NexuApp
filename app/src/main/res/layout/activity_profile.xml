@@ -3,13 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@drawable/home_gradient">
+    android:background="@null">
 
     <!-- SCROLLVIEW (solo 1 hijo permitido) -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
 
         <LinearLayout
             android:orientation="vertical"
@@ -24,9 +25,18 @@
                 android:layout_height="wrap_content"
                 android:text="Termina de completar tu perfil"
                 android:textSize="20sp"
-                android:textColor="@color/textPrimaryBlue"
+                android:textColor="@color/black"
                 android:layout_marginTop="16dp"
                 android:padding="4dp" />
+            <ImageView
+                android:id="@+id/btnMenu"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_more_vert"
+                android:padding="8dp"
+                android:layout_gravity="end"
+                android:contentDescription="Menu"/>
+
 
             <!-- FOTO + NOMBRE HEADER + BOTÓN EDITAR -->
             <LinearLayout
@@ -48,7 +58,7 @@
                     android:text="Usuario"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="@color/textPrimaryBlue"
+                    android:textColor="@color/black"
                     android:layout_marginStart="16dp"/>
 
                 <Button
@@ -70,7 +80,7 @@
                 android:layout_height="wrap_content"
                 android:text="Cuéntanos sobre ti..."
                 android:textSize="18sp"
-                android:textColor="@color/textPrimaryBlue"
+                android:textColor="@color/black"
                 android:layout_marginTop="20dp" />
 
             <!-- Nombre (NO editable) -->
@@ -80,7 +90,7 @@
                 android:layout_height="wrap_content"
                 android:text="Nombre"
                 android:textStyle="bold"
-                android:textColor="@color/textPrimaryBlue"
+                android:textColor="@color/black"
                 android:layout_marginTop="24dp"/>
 
             <!-- CARRERA -->

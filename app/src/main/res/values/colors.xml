@@ -20,5 +20,27 @@
     <color name="iconBlue">#0D2B66</color>
 
 
+    <color name="colorBackground">#E6EAF6</color>
+    <color name="colorBackground2">#F8E7EE</color>
 
+    <!-- Textos -->
+    <color name="colorPrimaryText">#132E63</color>
+    <color name="colorSecondaryText">#263A6A</color>
+
+    <!-- Botones / acentos -->
+    <color name="colorAccent">#1B2F80</color>
+
+    <!-- TEMA CLARO -->
+    <color name="light_bg_start">#E6EAF6</color>
+    <color name="light_bg_end">#F8E7EE</color>
+    <color name="light_text">#132E63</color>
+    <color name="light_secondary_text">#263A6A</color>
+    <color name="light_button">#1B2F80</color>
+
+    <!-- TEMA OSCURO -->
+    <color name="dark_bg_start">#063749</color>
+    <color name="dark_bg_end">#042430</color>
+    <color name="dark_text">#FFFFFF</color>
+    <color name="dark_secondary_text">#A8CBD8</color>
+    <color name="dark_button">#6CCEE7</color>
 </resources>

@@ -61,6 +61,7 @@ class LoginActivity : AppCompatActivity() {
             homeIntent.putExtra("username", storedName)
             homeIntent.putExtra("email", email)
             startActivity(homeIntent)
+            finish()
         }
     }
 }

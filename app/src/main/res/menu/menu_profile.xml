@@ -1,0 +1,5 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/opCuenta" android:title="Mi cuenta" />
+    <item android:id="@+id/opTema" android:title="Cambiar tema" />
+    <item android:id="@+id/opCerrar" android:title="Cerrar sesión" />
+</menu>

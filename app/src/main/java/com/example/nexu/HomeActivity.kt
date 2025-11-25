@@ -2,6 +2,7 @@ package com.example.nexu
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -11,6 +12,9 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+
+        val root = findViewById<View>(android.R.id.content)
+        ThemeManager.applyThemeBackground(this, root)
 
         // Obtener el nombre enviado desde LoginActivity
         val username = intent.getStringExtra("username") ?: "Usuario"
@@ -28,6 +32,7 @@ class HomeActivity : AppCompatActivity() {
             val intent = Intent(this, ProfileActivity::class.java)
             intent.putExtra("email", email)
             startActivity(intent)
+            finish()
         }
 
     }
