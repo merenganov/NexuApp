@@ -202,7 +202,12 @@ class ProfileActivity : AppCompatActivity() {
             finish()
 
         }
-        //val navMessages = findViewById<LinearLayout>(R.id.navMessages)
+        val navMessages = findViewById<LinearLayout>(R.id.navMessages)
+        navMessages.setOnClickListener {
+            val intent= Intent (this, MessagesActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
         //val navProfile = findViewById<LinearLayout>(R.id.navProfile)
     }
 

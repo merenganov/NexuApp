@@ -47,5 +47,12 @@ class HomeActivity : AppCompatActivity() {
             finish()
         }
 
+        val messagesection : LinearLayout = findViewById(R. id.messagesection)
+        messagesection.setOnClickListener {
+            val intent = Intent(this, MessagesActivity::class.java)
+            startActivity(intent)
+            finish()
+        }
+
     }
 }
