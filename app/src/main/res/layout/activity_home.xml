@@ -4,8 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@null">
+    android:padding="24dp">
 
     <!-- BIENVENIDA -->
     <TextView
@@ -16,8 +15,6 @@
         android:textSize="32sp"
         android:textStyle="bold"
         android:textColor="@color/black"/>
-
-
 
     <!-- INPUT ALGO NUEVO -->
     <EditText
@@ -32,14 +29,14 @@
         android:layout_marginBottom="16dp"
         android:elevation="3dp"/>
 
-    <!-- INPUT BUSCAR -->
+    <!-- BUSCADOR -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="55dp"
         android:background="@color/white"
         android:padding="12dp"
         android:elevation="3dp"
-        android:layout_marginBottom="24dp">
+        android:layout_marginBottom="12dp">
 
         <EditText
             android:id="@+id/searchInput"
@@ -60,13 +57,16 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:src="@drawable/ic_search" />
+
     </RelativeLayout>
 
-    <!-- ESPACIO FLEXIBLE -->
-    <View
+    <!-- 🔥 ESTE ES TU FEED (YA CORRECTO Y FUERA DEL BUSCADOR) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvFeed"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:padding="16dp" />
 
     <!-- BARRA INFERIOR -->
     <LinearLayout
@@ -110,6 +110,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_messages" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -144,14 +144,44 @@
             </LinearLayout>
 
             <!-- ATRIBUTOS -->
-            <EditText
+            <!--<EditText
                 android:id="@+id/edtAtributos"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Atributos"
                 android:textColorHint="@color/black"
                 android:textColor="@color/black"
-                android:enabled="false"/>
+                android:enabled="false"/> -->
+            <!-- MOSTRAR ATRIBUTOS COMO TEXTO -->
+            <TextView
+                android:id="@+id/txtTituloAtributos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Atributos seleccionados:"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:layout_marginTop="12dp"/>
+
+            <TextView
+                android:id="@+id/txtAtributos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Atributos"
+                android:textSize="16sp"
+                android:textColor="@color/black"
+                android:visibility="visible"
+                android:layout_marginTop="8dp"/>
+
+            <!-- LISTA DE CHECKBOX CUANDO SE EDITA -->
+            <LinearLayout
+                android:id="@+id/boxAtributos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="8dp"/>
+
 
             <!-- BOTÓN FINALIZAR -->
             <Button
@@ -165,6 +195,24 @@
                 android:visibility="gone"/>
         </LinearLayout>
     </ScrollView>
+    <ImageView
+        android:id="@+id/btnAddPost"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/ic_add"
+        android:layout_marginTop="12dp"
+        android:layout_gravity="end"
+        android:contentDescription="Crear publicación" />
+
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPublicaciones"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp" />
+
+
+
 
     <!-- BARRA DE NAVEGACIÓN INFERIOR -->
     <LinearLayout
