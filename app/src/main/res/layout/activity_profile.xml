@@ -5,12 +5,12 @@
     android:orientation="vertical"
     android:background="@null">
 
-    <!-- SCROLLVIEW (solo 1 hijo permitido) -->
+    <!-- SCROLL GENERAL (todo el contenido del perfil + publicaciones) -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-
+        android:layout_weight="1"
+        android:fillViewport="true">
 
         <LinearLayout
             android:orientation="vertical"
@@ -28,6 +28,7 @@
                 android:textColor="@color/black"
                 android:layout_marginTop="16dp"
                 android:padding="4dp" />
+
             <ImageView
                 android:id="@+id/btnMenu"
                 android:layout_width="32dp"
@@ -37,8 +38,7 @@
                 android:layout_gravity="end"
                 android:contentDescription="Menu"/>
 
-
-            <!-- FOTO + NOMBRE HEADER + BOTÓN EDITAR -->
+            <!-- FOTO + NOMBRE + EDITAR -->
             <LinearLayout
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
@@ -70,10 +70,9 @@
                     android:backgroundTint="@color/textPrimaryBlue"
                     android:textColor="@color/white" />
 
-
             </LinearLayout>
 
-            <!-- Cuentanos -->
+            <!-- CUENTANOS -->
             <TextView
                 android:id="@+id/txtMensaje"
                 android:layout_width="wrap_content"
@@ -83,7 +82,7 @@
                 android:textColor="@color/black"
                 android:layout_marginTop="20dp" />
 
-            <!-- Nombre (NO editable) -->
+            <!-- NOMBRE (NO editable) -->
             <TextView
                 android:id="@+id/txtNombre"
                 android:layout_width="wrap_content"
@@ -144,15 +143,6 @@
             </LinearLayout>
 
             <!-- ATRIBUTOS -->
-            <!--<EditText
-                android:id="@+id/edtAtributos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Atributos"
-                android:textColorHint="@color/black"
-                android:textColor="@color/black"
-                android:enabled="false"/> -->
-            <!-- MOSTRAR ATRIBUTOS COMO TEXTO -->
             <TextView
                 android:id="@+id/txtTituloAtributos"
                 android:layout_width="match_parent"
@@ -173,7 +163,7 @@
                 android:visibility="visible"
                 android:layout_marginTop="8dp"/>
 
-            <!-- LISTA DE CHECKBOX CUANDO SE EDITA -->
+            <!-- CHECKBOX ATRIBUTOS -->
             <LinearLayout
                 android:id="@+id/boxAtributos"
                 android:layout_width="match_parent"
@@ -181,7 +171,6 @@
                 android:orientation="vertical"
                 android:visibility="gone"
                 android:layout_marginTop="8dp"/>
-
 
             <!-- BOTÓN FINALIZAR -->
             <Button
@@ -193,28 +182,28 @@
                 android:backgroundTint="@color/textPrimaryBlue"
                 android:textColor="@color/white"
                 android:visibility="gone"/>
+
+            <!-- BOTÓN AÑADIR PUBLICACIÓN -->
+            <ImageView
+                android:id="@+id/btnAddPost"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_add"
+                android:layout_marginTop="20dp"
+                android:layout_gravity="end"
+                android:contentDescription="Crear publicación" />
+
+            <!-- PUBLICACIONES -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPublicaciones"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" />
+
         </LinearLayout>
     </ScrollView>
-    <ImageView
-        android:id="@+id/btnAddPost"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_add"
-        android:layout_marginTop="12dp"
-        android:layout_gravity="end"
-        android:contentDescription="Crear publicación" />
 
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvPublicaciones"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp" />
-
-
-
-
-    <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+    <!-- NAV BAR -->
     <LinearLayout
         android:id="@+id/bottomNavProfile"
         android:layout_width="match_parent"
@@ -224,7 +213,6 @@
         android:background="@color/white"
         android:padding="8dp">
 
-        <!-- HOME -->
         <LinearLayout
             android:id="@+id/navHome"
             android:layout_width="0dp"
@@ -244,7 +232,6 @@
                 android:textSize="14sp"/>
         </LinearLayout>
 
-        <!-- MENSAJES -->
         <LinearLayout
             android:id="@+id/navMessages"
             android:layout_width="0dp"
@@ -264,7 +251,6 @@
                 android:textSize="14sp"/>
         </LinearLayout>
 
-        <!-- PERFIL -->
         <LinearLayout
             android:id="@+id/navProfile"
             android:layout_width="0dp"
@@ -287,4 +273,3 @@
     </LinearLayout>
 
 </LinearLayout>
-
