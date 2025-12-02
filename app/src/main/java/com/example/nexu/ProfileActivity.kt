@@ -184,15 +184,27 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         //BOTON PAR AÑADIR PUBLICACION
+        // BOTÓN PARA AÑADIR PUBLICACIÓN
         btnAddPost.setOnClickListener {
 
+            // Tomamos los datos del usuario desde SharedPreferences
             val dataUser = sharedPref.getString(email, "")!!.split("#")
-            val atributosActuales = dataUser.last(
 
-            )
+            // El último campo son los atributos guardados: "Fitness, Musico, Programador"
+            val atributosActuales = dataUser.last()
+                .split(",")               // separamos por coma
+                .map { it.trim() }        // quitamos espacios
+                .filter { it.isNotBlank() } // quitamos vacíos
 
+            if (atributosActuales.isEmpty()) {
+                Toast.makeText(this, "Primero selecciona atributos en tu perfil", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Ahora enviamos la LISTA de atributos
             abrirDialogNuevaPublicacion(nombre, carrera, atributosActuales)
         }
+
 
 
 
@@ -284,7 +296,12 @@ class ProfileActivity : AppCompatActivity() {
             boxAtributos.addView(check)
         }
     }
-    private fun abrirDialogNuevaPublicacion(nombre: String, carrera: String, atributos: String) {
+    private fun abrirDialogNuevaPublicacion(
+        nombre: String,
+        carrera: String,
+        atributos: List<String>
+    ) {
+
         val dialog = AlertDialog.Builder(this).create()
         val view = layoutInflater.inflate(R.layout.dialog_new_post, null)
 
@@ -294,25 +311,29 @@ class ProfileActivity : AppCompatActivity() {
         val edtText = view.findViewById<EditText>(R.id.edtPostText)
         val btnPublicar = view.findViewById<Button>(R.id.btnPublicar)
 
+        // 🔹 Mostrar nombre y carrera
         txtNombre.text = nombre
         txtCarrera.text = carrera
 
-        // 🔥 OBTENER ATRIBUTOS REALES DEL USUARIO DESDE SharedPreferences
-        val data = sharedPref.getString(email, "")!!.split("#")
-        val atributosGuardados = data.last()
-            .split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
+        // 🔹 Los atributos YA VIENEN como lista desde el botón "+"
+        val atributosGuardados = atributos
 
-        // 🔥 LLENAR SPINNER CON ESOS ATRIBUTOS
+        // Si el usuario no tiene atributos seleccionados, evitar error
+        if (atributosGuardados.isEmpty()) {
+            Toast.makeText(this, "Primero agrega atributos en tu perfil", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 🔹 Llenar spinner con los atributos seleccionados en el perfil
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, atributosGuardados)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerTags.adapter = adapter
 
+        // 🔹 Acción de publicar
         btnPublicar.setOnClickListener {
 
             val tag = spinnerTags.selectedItem?.toString() ?: ""
-            val texto = edtText.text.toString()
+            val texto = edtText.text.toString().trim()
 
             if (texto.isBlank()) {
                 Toast.makeText(this, "Escribe algo para publicar", Toast.LENGTH_SHORT).show()
@@ -320,10 +341,9 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             guardarPublicacion(nombre, carrera, tag, texto)
-
             dialog.dismiss()
 
-            // 🔥 RECARGAR LAS PUBLICACIONES DEL PERFIL
+            // 🔹 Recargar publicaciones
             val rvPub = findViewById<RecyclerView>(R.id.rvPublicaciones)
             rvPub.adapter = PostAdapter(
                 this,
@@ -331,12 +351,12 @@ class ProfileActivity : AppCompatActivity() {
                 onEdit = { editarPublicacion(it) },
                 onDelete = { eliminarPublicacion(it) }
             )
-
         }
 
         dialog.setView(view)
         dialog.show()
     }
+
 
 
     private fun guardarPublicacion(nombre: String, carrera: String, tag: String, texto: String) {
