@@ -37,7 +37,7 @@ class PostAdapter(
 
                 popup.setOnMenuItemClickListener { item ->
                     when (item.itemId) {
-                        R.id.opEditarPost -> onEdit(post)
+                        //R.id.opEditarPost -> onEdit(post)
                         R.id.opEliminarPost -> onDelete(post)
                     }
                     true
