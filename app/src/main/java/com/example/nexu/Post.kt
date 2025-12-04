@@ -4,5 +4,6 @@ data class Post(
     val nombre: String,
     val carrera: String,
     val tag: String,
-    val contenido: String
+    val contenido: String,
+    val emailAutor: String
 )

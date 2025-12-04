@@ -12,8 +12,8 @@ import androidx.recyclerview.widget.RecyclerView
 class PostAdapter(
     private val context: Context,
     private val lista: List<Post>,
-    private val onEdit: (Post) -> Unit,
-    private val onDelete: (Post) -> Unit
+    private val onDelete: (Post) -> Unit,
+    private val onItemClick: (Post) -> Unit   // <--- NUEVO callback
 ) : RecyclerView.Adapter<PostAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -24,6 +24,9 @@ class PostAdapter(
         val txtContenido: TextView = view.findViewById(R.id.txtItemContenido)
         val btnMenu: ImageView = view.findViewById(R.id.btnItemMenu)
 
+        // Este es el layout raiz que hiciste clickeable en item_post.xml
+        private val cardPost: View = view.findViewById(R.id.cardPost)
+
         fun bind(post: Post) {
 
             txtNombre.text = post.nombre
@@ -31,13 +34,22 @@ class PostAdapter(
             txtTag.text = "#${post.tag}"
             txtContenido.text = post.contenido
 
+            // -----------------------------
+            //   CLICK EN LA PUBLICACIÓN
+            // -----------------------------
+            cardPost.setOnClickListener {
+                onItemClick(post)
+            }
+
+            // -----------------------------
+            //     MENÚ "ELIMINAR"
+            // -----------------------------
             btnMenu.setOnClickListener {
                 val popup = PopupMenu(context, btnMenu)
                 popup.menuInflater.inflate(R.menu.menu_post_item, popup.menu)
 
                 popup.setOnMenuItemClickListener { item ->
                     when (item.itemId) {
-                        //R.id.opEditarPost -> onEdit(post)
                         R.id.opEliminarPost -> onDelete(post)
                     }
                     true

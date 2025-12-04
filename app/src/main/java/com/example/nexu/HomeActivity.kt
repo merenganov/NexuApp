@@ -35,7 +35,6 @@ class HomeActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.welcomeText).text = "Bienvenid@ $username"
 
         // Navegación
-
         findViewById<LinearLayout>(R.id.messagesection).setOnClickListener {
             startActivity(Intent(this, MessagesActivity::class.java)); finish()
         }
@@ -66,9 +65,45 @@ class HomeActivity : AppCompatActivity() {
         rvFeed.adapter = PostAdapter(
             context = this,
             lista = listaGlobal,
-            onEdit = {},      // obligatorio pero vacío
-            onDelete = {}     // obligatorio pero vacío
+            onDelete = { post ->
+                eliminarPost(post)
+            },
+            onItemClick = { post ->
+
+                // SOLO SI LA PUBLICACIÓN NO ES DEL USUARIO ACTUAL
+                if (post.emailAutor != currentEmail) {
+                    val intent = Intent(this, ChatActivity::class.java)
+                    intent.putExtra("emailOtro", post.emailAutor)
+                    intent.putExtra("nombreOtro", post.nombre)
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this, "Esta es tu publicación", Toast.LENGTH_SHORT).show()
+                }
+            }
         )
+    }
+
+    // ============================================================
+    // ELIMINAR PUBLICACIÓN
+    // ============================================================
+    private fun eliminarPost(post: Post) {
+        val key = "${post.emailAutor}_posts"
+        val current = sharedPref.getStringSet(key, emptySet())!!.toMutableSet()
+
+        val record = "${post.nombre}|${post.carrera}|${post.tag}|${post.contenido}|${post.emailAutor}"
+        current.remove(record)
+
+        sharedPref.edit().putStringSet(key, current).apply()
+
+        listaGlobal = obtenerPublicacionesGlobales().toMutableList()
+        rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
+            if (it.emailAutor != currentEmail) {
+                startActivity(Intent(this, ChatActivity::class.java).apply {
+                    putExtra("emailOtro", it.emailAutor)
+                    putExtra("nombreOtro", it.nombre)
+                })
+            }
+        })
     }
 
     // ============================================================
@@ -79,12 +114,40 @@ class HomeActivity : AppCompatActivity() {
 
         for (key in sharedPref.all.keys) {
             if (key.endsWith("_posts")) {
+
+                // el email del autor viene en el nombre de la key: "email_posts"
+                val emailAutorDeKey = key.removeSuffix("_posts")
+
                 val raw = sharedPref.getStringSet(key, emptySet()) ?: emptySet()
 
-                raw.forEach {
-                    val parts = it.split("|")
-                    if (parts.size == 4) {
-                        lista.add(Post(parts[0], parts[1], parts[2], parts[3]))
+                raw.forEach { s ->
+                    val parts = s.split("|")
+
+                    when (parts.size) {
+                        // Formato viejo (sin emailAutor guardado)
+                        4 -> {
+                            lista.add(
+                                Post(
+                                    nombre = parts[0],
+                                    carrera = parts[1],
+                                    tag = parts[2],
+                                    contenido = parts[3],
+                                    emailAutor = emailAutorDeKey
+                                )
+                            )
+                        }
+                        // Formato nuevo (con emailAutor guardado)
+                        5 -> {
+                            lista.add(
+                                Post(
+                                    nombre = parts[0],
+                                    carrera = parts[1],
+                                    tag = parts[2],
+                                    contenido = parts[3],
+                                    emailAutor = parts[4]
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -93,13 +156,21 @@ class HomeActivity : AppCompatActivity() {
         return lista
     }
 
+
     // ============================================================
     // BUSCADOR
     // ============================================================
     private fun filtrarBuscador(query: String) {
 
         if (query.isBlank()) {
-            rvFeed.adapter = PostAdapter(this, listaGlobal, onEdit = {}, onDelete = {})
+            rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
+                if (it.emailAutor != currentEmail) {
+                    startActivity(Intent(this, ChatActivity::class.java).apply {
+                        putExtra("emailOtro", it.emailAutor)
+                        putExtra("nombreOtro", it.nombre)
+                    })
+                }
+            })
             return
         }
 
@@ -108,7 +179,14 @@ class HomeActivity : AppCompatActivity() {
                     post.contenido.contains(query, ignoreCase = true)
         }
 
-        rvFeed.adapter = PostAdapter(this, filtrados, onEdit = {}, onDelete = {})
+        rvFeed.adapter = PostAdapter(this, filtrados, onDelete = { eliminarPost(it) }, onItemClick = {
+            if (it.emailAutor != currentEmail) {
+                startActivity(Intent(this, ChatActivity::class.java).apply {
+                    putExtra("emailOtro", it.emailAutor)
+                    putExtra("nombreOtro", it.nombre)
+                })
+            }
+        })
     }
 
     // ============================================================
@@ -155,7 +233,14 @@ class HomeActivity : AppCompatActivity() {
             dialog.dismiss()
 
             listaGlobal = obtenerPublicacionesGlobales().toMutableList()
-            rvFeed.adapter = PostAdapter(this, listaGlobal, onEdit = {}, onDelete = {})
+            rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
+                if (it.emailAutor != currentEmail) {
+                    startActivity(Intent(this, ChatActivity::class.java).apply {
+                        putExtra("emailOtro", it.emailAutor)
+                        putExtra("nombreOtro", it.nombre)
+                    })
+                }
+            })
         }
 
         dialog.setView(view)
@@ -167,7 +252,8 @@ class HomeActivity : AppCompatActivity() {
     // ============================================================
     private fun guardarPublicacion(nombre: String, carrera: String, tag: String, texto: String) {
 
-        val post = "$nombre|$carrera|$tag|$texto"
+        // Guardamos siempre con 5 campos
+        val post = "$nombre|$carrera|$tag|$texto|$currentEmail"
         val key = "${currentEmail}_posts"
 
         val current = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
@@ -177,4 +263,5 @@ class HomeActivity : AppCompatActivity() {
 
         Toast.makeText(this, "Publicado", Toast.LENGTH_SHORT).show()
     }
+
 }

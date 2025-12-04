@@ -261,11 +261,22 @@ class ProfileActivity : AppCompatActivity() {
         val rvPub = findViewById<RecyclerView>(R.id.rvPublicaciones)
         rvPub.layoutManager = LinearLayoutManager(this)
         rvPub.adapter = PostAdapter(
-            this,
-            obtenerPublicacionesUsuario(),
-            onEdit = { editarPublicacion(it) },
-            onDelete = { eliminarPublicacion(it) }
+            context = this,
+            lista = obtenerPublicacionesUsuario(),
+
+            // Ya NO existe onEdit en el nuevo adapter, lo implementamos manualmente usando el menú
+            onDelete = { post ->
+                eliminarPublicacion(post)
+            },
+
+            // Qué hacer cuando el usuario toca una publicación dentro de su perfil
+            // Aquí NO debe abrir chat porque son publicaciones propias
+            onItemClick = { post ->
+                // En el perfil, la acción natural es EDITAR la publicación cuando se toca
+                editarPublicacion(post)
+            }
         )
+
     }
 
     // ================================================================
@@ -321,7 +332,8 @@ class ProfileActivity : AppCompatActivity() {
     // ================================================================
 
     private fun guardarPublicacion(nombre: String, carrera: String, tag: String, texto: String) {
-        val post = "$nombre|$carrera|$tag|$texto"
+        // ahora también guardamos el email del autor
+        val post = "$nombre|$carrera|$tag|$texto|$email"
         val key = "${email}_posts"
         val current = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
 
@@ -331,15 +343,33 @@ class ProfileActivity : AppCompatActivity() {
         Toast.makeText(this, "Publicación creada", Toast.LENGTH_SHORT).show()
     }
 
+
     private fun obtenerPublicacionesUsuario(): List<Post> {
         val key = "${email}_posts"
         val raw = sharedPref.getStringSet(key, emptySet()) ?: emptySet()
 
         return raw.mapNotNull { s ->
             val p = s.split("|")
-            if (p.size == 4) Post(p[0], p[1], p[2], p[3]) else null
+            when (p.size) {
+                4 -> Post(
+                    nombre = p[0],
+                    carrera = p[1],
+                    tag = p[2],
+                    contenido = p[3],
+                    emailAutor = email       // como es tu perfil, el autor eres tú
+                )
+                5 -> Post(
+                    nombre = p[0],
+                    carrera = p[1],
+                    tag = p[2],
+                    contenido = p[3],
+                    emailAutor = p[4]
+                )
+                else -> null
+            }
         }
     }
+
 
     private fun abrirDialogNuevaPublicacion(
         nombre: String,
@@ -440,11 +470,12 @@ class ProfileActivity : AppCompatActivity() {
     private fun recargarPublicaciones() {
         val rvPub = findViewById<RecyclerView>(R.id.rvPublicaciones)
         rvPub.adapter = PostAdapter(
-            this,
-            obtenerPublicacionesUsuario(),
-            onEdit = { editarPublicacion(it) },
-            onDelete = { eliminarPublicacion(it) }
+            context = this,
+            lista = obtenerPublicacionesUsuario(),
+            onDelete = { post -> eliminarPublicacion(post) },
+            onItemClick = { post -> editarPublicacion(post) }
         )
+
     }
 
     // ================================================================
