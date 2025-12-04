@@ -1,7 +1,9 @@
 package com.example.nexu
 
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -21,6 +23,8 @@ class ChatActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
+        val root = findViewById<View>(android.R.id.content)
+        ThemeManager.applyThemeBackground(this, root)
 
         // Preferencias
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
@@ -46,6 +50,11 @@ class ChatActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnEnviar).setOnClickListener {
             enviarMensaje()
         }
+        findViewById<ImageButton>(R.id.btnBackChat).setOnClickListener {
+            startActivity(Intent(this, MessagesActivity::class.java))
+            finish()
+        }
+
     }
 
     // ============================================================
@@ -66,10 +75,33 @@ class ChatActivity : AppCompatActivity() {
 
         listaMensajes.add(mensaje)
         guardarMensajes()
+        guardarChatEnLista(emailOtro, texto)
+
 
         edtMensaje.setText("")
         actualizarRecycler()
     }
+    private fun guardarChatEnLista(emailOtro: String, ultimoMensaje: String) {
+        val key = "${emailActual}_chatlist"
+
+        // Recuperar la lista existente
+        val lista = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
+
+        // Guardar email en la lista
+        lista.add(emailOtro)
+        sharedPref.edit().putStringSet(key, lista).apply()
+
+        // Guardar también último mensaje y timestamp del chat
+        val chatInfoKey = "chatinfo_${emailActual}_$emailOtro"
+        val timestamp = System.currentTimeMillis()
+
+        val nombreOtro = sharedPref.getString(emailOtro, "")?.split("#")?.getOrNull(0) ?: emailOtro
+
+        val chatData = "$nombreOtro|$ultimoMensaje|$timestamp"
+
+        sharedPref.edit().putString(chatInfoKey, chatData).apply()
+    }
+
 
     // ============================================================
     // CARGAR HISTORIAL DEL CHAT

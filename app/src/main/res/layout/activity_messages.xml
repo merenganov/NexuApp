@@ -8,6 +8,7 @@
 
     <!-- BARRA DE BÚSQUEDA -->
     <LinearLayout
+        android:id="@+id/searchBar"
         android:layout_width="match_parent"
         android:layout_height="55dp"
         android:orientation="horizontal"
@@ -28,8 +29,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Buscar..."
-            android:textColor="@color/textPrimaryBlue"
-            android:textColorHint="@color/black"
+            android:textColor="@color/black"
+            android:textColorHint="@color/textPrimaryBlue"
             android:background="@android:color/transparent"
             android:paddingStart="10dp" />
 
@@ -42,11 +43,11 @@
 
     <!-- LISTA DE CHATS -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerChats"
+        android:id="@+id/rvChats"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="15dp"
         android:overScrollMode="never" />
 
     <!-- MENSAJE CUANDO NO HAY CHATS -->
@@ -56,13 +57,14 @@
         android:gravity="center"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="20dp"
         android:visibility="gone">
 
         <ImageView
             android:layout_width="110dp"
             android:layout_height="110dp"
-            android:src="@drawable/ic_messages" />
+            android:src="@drawable/ic_messages"
+            android:alpha="0.8"/>
 
         <TextView
             android:layout_width="wrap_content"
@@ -73,8 +75,9 @@
             android:layout_marginTop="10dp"/>
     </LinearLayout>
 
+    <!-- NAV BAR -->
     <LinearLayout
-        android:id="@+id/bottomNavmessages"
+        android:id="@+id/bottomNavMessages"
         android:layout_width="match_parent"
         android:layout_height="70dp"
         android:orientation="horizontal"
