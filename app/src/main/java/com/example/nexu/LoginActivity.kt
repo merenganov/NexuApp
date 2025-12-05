@@ -6,8 +6,15 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import android.content.SharedPreferences
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginActivity : AppCompatActivity() {
+
+    private lateinit var sharedPref: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,13 +26,15 @@ class LoginActivity : AppCompatActivity() {
         val emailInput: EditText = findViewById(R.id.emailInput)
         val passwordInput: EditText = findViewById(R.id.passwordInput)
 
+        // SharedPreferences para guardar token y usuario
+        sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
+
         // === BOTÓN PARA IR A CREAR CUENTA ===
         signinButton.setOnClickListener {
-            val intent = Intent(this, CreateAccountActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, CreateAccountActivity::class.java))
         }
 
-        // === BOTÓN LOGIN (validar usuario) ===
+        // === BOTÓN LOGIN QUE AHORA LLAMA AL BACKEND ===
         loginButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString().trim()
@@ -35,37 +44,76 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Cargar usuarios almacenados
-            val sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
-            val storedData = sharedPref.getString(email, null)
+            // Hacemos login real hacia el backend
+            hacerLogin(email, password)
+        }
+    }
 
-            if (storedData == null) {
-                Toast.makeText(this, "Usuario no encontrado", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+    // ================================================================
+    // FUNCIÓN QUE SE CONECTA AL BACKEND PARA VALIDAR LOGIN
+    // ================================================================
+    private fun hacerLogin(email: String, password: String) {
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val request = LoginRequest(email, password)
+
+                // Petición al backend
+                val response = RetrofitClient.api.login(request)
+
+                withContext(Dispatchers.Main) {
+
+                    if (response.isSuccessful) {
+                        val data = response.body()?.data
+
+                        if (data != null) {
+
+                            val token = data.accessToken
+
+                            // Guardamos token y usuario actual en SharedPreferences
+                            sharedPref.edit()
+                                .putString("token", token)
+                                .putString("currentUser", email)
+                                .apply()
+
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Inicio de sesión exitoso",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            // Ir a HomeActivity
+                            val homeIntent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            homeIntent.putExtra("email", email)
+                            startActivity(homeIntent)
+                            finish()
+
+                        } else {
+                            Toast.makeText(
+                                this@LoginActivity,
+                                "Error al procesar los datos",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                    } else {
+                        Toast.makeText(
+                            this@LoginActivity,
+                            "Credenciales incorrectas",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Error al conectar con el servidor: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
-
-            // storedData viene como: nombre#contraseña
-            val parts = storedData.split("#")
-            val storedName = parts[0]
-            val storedPassword = parts[1]
-
-            if (storedPassword != password) {
-                Toast.makeText(this, "Contraseña incorrecta", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            // === LOGIN EXITOSO ===
-            Toast.makeText(this, "Bienvenido $storedName", Toast.LENGTH_SHORT).show()
-            // Guardar el usuario actual para usar en toda la app
-            sharedPref.edit().putString("currentUser", email).apply()
-
-
-            val homeIntent = Intent(this, HomeActivity::class.java)
-            homeIntent.putExtra("username", storedName)
-            homeIntent.putExtra("email", email)
-            startActivity(homeIntent)
-            finish()
         }
     }
 }
-

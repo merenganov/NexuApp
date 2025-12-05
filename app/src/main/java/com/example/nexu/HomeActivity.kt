@@ -9,8 +9,12 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class HomeActivity : AppCompatActivity() {
 
@@ -29,10 +33,11 @@ class HomeActivity : AppCompatActivity() {
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
         currentEmail = sharedPref.getString("currentUser", null) ?: ""
 
-        val data = sharedPref.getString(currentEmail, "")!!.split("#")
-        val username = data.getOrNull(0) ?: "Usuario"
-
-        findViewById<TextView>(R.id.welcomeText).text = "Bienvenid@ $username"
+        // Obtener token
+        val token = sharedPref.getString("token", null)
+        if (token != null) {
+            obtenerPerfilDesdeBackend(token)
+        }
 
         // Navegación
         findViewById<LinearLayout>(R.id.messagesection).setOnClickListener {
@@ -69,18 +74,47 @@ class HomeActivity : AppCompatActivity() {
                 eliminarPost(post)
             },
             onItemClick = { post ->
-
-                // SOLO SI LA PUBLICACIÓN NO ES DEL USUARIO ACTUAL
                 if (post.emailAutor != currentEmail) {
-                    val intent = Intent(this, ChatActivity::class.java)
-                    intent.putExtra("emailOtro", post.emailAutor)
-                    intent.putExtra("nombreOtro", post.nombre)
-                    startActivity(intent)
+                    startActivity(Intent(this, ChatActivity::class.java).apply {
+                        putExtra("emailOtro", post.emailAutor)
+                        putExtra("nombreOtro", post.nombre)
+                    })
                 } else {
                     Toast.makeText(this, "Esta es tu publicación", Toast.LENGTH_SHORT).show()
                 }
             }
         )
+    }
+
+    // ============================================================
+    // OBTENER PERFIL DESDE BACKEND
+    // ============================================================
+    private fun obtenerPerfilDesdeBackend(token: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.api.getUserProfile("Bearer $token")
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        val profile = response.body()?.data
+                        if (profile != null) {
+
+                            // Mostrar nombre real en "Bienvenid@"
+                            findViewById<TextView>(R.id.welcomeText).text =
+                                "Bienvenid@ ${profile.name}"
+
+                        }
+                    } else {
+                        findViewById<TextView>(R.id.welcomeText).text = "Bienvenid@"
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    findViewById<TextView>(R.id.welcomeText).text = "Bienvenid@"
+                }
+            }
+        }
     }
 
     // ============================================================
@@ -96,14 +130,19 @@ class HomeActivity : AppCompatActivity() {
         sharedPref.edit().putStringSet(key, current).apply()
 
         listaGlobal = obtenerPublicacionesGlobales().toMutableList()
-        rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
-            if (it.emailAutor != currentEmail) {
-                startActivity(Intent(this, ChatActivity::class.java).apply {
-                    putExtra("emailOtro", it.emailAutor)
-                    putExtra("nombreOtro", it.nombre)
-                })
+        rvFeed.adapter = PostAdapter(
+            this,
+            listaGlobal,
+            onDelete = { eliminarPost(it) },
+            onItemClick = {
+                if (it.emailAutor != currentEmail) {
+                    startActivity(Intent(this, ChatActivity::class.java).apply {
+                        putExtra("emailOtro", it.emailAutor)
+                        putExtra("nombreOtro", it.nombre)
+                    })
+                }
             }
-        })
+        )
     }
 
     // ============================================================
@@ -114,17 +153,13 @@ class HomeActivity : AppCompatActivity() {
 
         for (key in sharedPref.all.keys) {
             if (key.endsWith("_posts")) {
-
-                // el email del autor viene en el nombre de la key: "email_posts"
                 val emailAutorDeKey = key.removeSuffix("_posts")
-
                 val raw = sharedPref.getStringSet(key, emptySet()) ?: emptySet()
 
                 raw.forEach { s ->
                     val parts = s.split("|")
 
                     when (parts.size) {
-                        // Formato viejo (sin emailAutor guardado)
                         4 -> {
                             lista.add(
                                 Post(
@@ -136,7 +171,6 @@ class HomeActivity : AppCompatActivity() {
                                 )
                             )
                         }
-                        // Formato nuevo (con emailAutor guardado)
                         5 -> {
                             lista.add(
                                 Post(
@@ -156,12 +190,10 @@ class HomeActivity : AppCompatActivity() {
         return lista
     }
 
-
     // ============================================================
     // BUSCADOR
     // ============================================================
     private fun filtrarBuscador(query: String) {
-
         if (query.isBlank()) {
             rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
                 if (it.emailAutor != currentEmail) {
@@ -179,14 +211,19 @@ class HomeActivity : AppCompatActivity() {
                     post.contenido.contains(query, ignoreCase = true)
         }
 
-        rvFeed.adapter = PostAdapter(this, filtrados, onDelete = { eliminarPost(it) }, onItemClick = {
-            if (it.emailAutor != currentEmail) {
-                startActivity(Intent(this, ChatActivity::class.java).apply {
-                    putExtra("emailOtro", it.emailAutor)
-                    putExtra("nombreOtro", it.nombre)
-                })
+        rvFeed.adapter = PostAdapter(
+            this,
+            filtrados,
+            onDelete = { eliminarPost(it) },
+            onItemClick = {
+                if (it.emailAutor != currentEmail) {
+                    startActivity(Intent(this, ChatActivity::class.java).apply {
+                        putExtra("emailOtro", it.emailAutor)
+                        putExtra("nombreOtro", it.nombre)
+                    })
+                }
             }
-        })
+        )
     }
 
     // ============================================================
@@ -252,7 +289,6 @@ class HomeActivity : AppCompatActivity() {
     // ============================================================
     private fun guardarPublicacion(nombre: String, carrera: String, tag: String, texto: String) {
 
-        // Guardamos siempre con 5 campos
         val post = "$nombre|$carrera|$tag|$texto|$currentEmail"
         val key = "${currentEmail}_posts"
 
