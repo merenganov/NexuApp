@@ -289,6 +289,13 @@ class ProfileActivity : AppCompatActivity() {
         val bio = findViewById<EditText>(R.id.edtDescripcion).text.toString()
         val fecha = findViewById<EditText>(R.id.edtFecha).text.toString()
 
+        
+        val isoRegex = Regex("\\d{4}-\\d{2}-\\d{2}")
+        if (!fecha.matches(isoRegex)) {
+            Toast.makeText(this, "Formato de fecha inválido. Usa YYYY-MM-DD", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val genero =
             when {
                 findViewById<CheckBox>(R.id.checkMasculino).isChecked -> "Masculino"
@@ -340,6 +347,7 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
+
     // =================================================================
     // DATE PICKER
     // =================================================================
@@ -347,10 +355,14 @@ class ProfileActivity : AppCompatActivity() {
         val cal = Calendar.getInstance()
         val dialog = DatePickerDialog(
             this,
-            { _, y, m, d ->
-                findViewById<EditText>(R.id.edtFecha).setText(
-                    "$y-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, "0"[0])}"
-                )
+            { _, year, month, day ->
+                val mm = (month + 1).toString().padStart(2, '0')
+                val dd = day.toString().padStart(2, '0')
+
+                // FORMATO ISO-8601 GARANTIZADO
+                val fechaISO = "$year-$mm-$dd"
+
+                findViewById<EditText>(R.id.edtFecha).setText(fechaISO)
             },
             cal.get(Calendar.YEAR),
             cal.get(Calendar.MONTH),
@@ -358,6 +370,7 @@ class ProfileActivity : AppCompatActivity() {
         )
         dialog.show()
     }
+
 
     // =================================================================
     // SUBIR FOTO AL BACKEND
