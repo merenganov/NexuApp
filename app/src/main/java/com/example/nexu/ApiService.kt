@@ -11,6 +11,9 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.http.Multipart
+import retrofit2.http.PUT
+import retrofit2.http.Part
 
 // ---------- MODELOS ----------
 
@@ -72,7 +75,13 @@ data class SignupRequest(
 data class UserProfile(
     val id: String,
     val name: String,
-    val email: String
+    val email: String,
+    val career: String?,
+    val bio: String?,
+    val date_of_birth: String?,
+    val gender: String?,
+    val tags: List<String>?,
+    val avatar_url: String?
 )
 data class UserProfileResponse(
     val data: UserProfile
@@ -80,6 +89,25 @@ data class UserProfileResponse(
 
 data class SignupResponse(
     val data: LoginData   // Usa la misma estructura que login
+)
+data class Tag(
+    val id: String,
+    val name: String,
+    val icon: String?,
+    val description: String?
+)
+
+data class TagsResponse(
+    val data: List<Tag>
+)
+
+// Request para actualizar perfil
+data class UpdateProfileRequest(
+    val career: String?,
+    val date_of_birth: String?,
+    val bio: String?,
+    val gender: String?,
+    val tag_ids: List<String>?
 )
 
 
@@ -104,6 +132,25 @@ interface ApiService {
     @GET("users/me")
     suspend fun getUserProfile(
         @Header("Authorization") token: String
+    ): Response<UserProfileResponse>
+
+
+    @PUT("users/me")
+    suspend fun updateUserProfile(
+        @Header("Authorization") token: String,
+        @Body request: UpdateProfileRequest
+    ): Response<UserProfileResponse>
+
+    @GET("tags/")
+    suspend fun getTags(
+        @Header("Authorization") token: String
+    ): Response<TagsResponse>
+
+    @Multipart
+    @POST("users/upload_avatar")
+    suspend fun uploadAvatar(
+        @Header("Authorization") token: String,
+        @Part avatar: okhttp3.MultipartBody.Part
     ): Response<UserProfileResponse>
 
 

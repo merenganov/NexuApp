@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:background="@null">
 
-    <!-- SCROLL GENERAL (todo el contenido del perfil + publicaciones) -->
+    <!-- SCROLL GENERAL -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -29,6 +29,7 @@
                 android:layout_marginTop="16dp"
                 android:padding="4dp" />
 
+            <!-- MENÚ SUPERIOR -->
             <ImageView
                 android:id="@+id/btnMenu"
                 android:layout_width="32dp"
@@ -53,7 +54,6 @@
                     android:scaleType="centerCrop"
                     android:padding="4dp"/>
 
-
                 <TextView
                     android:id="@+id/txtNombreHeader"
                     android:layout_width="wrap_content"
@@ -72,10 +72,9 @@
                     android:text="EDITAR"
                     android:backgroundTint="@color/textPrimaryBlue"
                     android:textColor="@color/white" />
-
             </LinearLayout>
 
-            <!-- CUENTANOS -->
+            <!-- CUÉNTANOS -->
             <TextView
                 android:id="@+id/txtMensaje"
                 android:layout_width="wrap_content"
@@ -105,44 +104,67 @@
                 android:textColor="@color/black"
                 android:enabled="false"/>
 
-            <!-- DESCRIPCIÓN -->
+            <!-- BIO / DESCRIPCIÓN -->
             <EditText
                 android:id="@+id/edtDescripcion"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Descripción"
+                android:hint="Biografía"
                 android:enabled="false"
                 android:textColorHint="@color/black"
                 android:textColor="@color/black"
                 android:minLines="3"/>
 
-            <!-- FECHA Y GÉNERO -->
-            <LinearLayout
-                android:orientation="horizontal"
+            <!-- FECHA DE NACIMIENTO -->
+            <EditText
+                android:id="@+id/edtFecha"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center">
+                android:hint="Fecha de nacimiento"
+                android:enabled="false"
+                android:textColorHint="@color/black"
+                android:textColor="@color/black"
+                android:layout_marginTop="16dp"/>
 
-                <EditText
-                    android:id="@+id/edtFecha"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="Fecha de nacimiento"
-                    android:textColorHint="@color/black"
-                    android:textColor="@color/black"
-                    android:enabled="false"/>
+            <!-- GÉNERO (solo lectura cuando no edita) -->
+            <EditText
+                android:id="@+id/edtGenero"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Género"
+                android:textColorHint="@color/black"
+                android:textColor="@color/black"
+                android:enabled="false"/>
 
-                <EditText
-                    android:id="@+id/edtGenero"
-                    android:layout_width="0dp"
+            <!-- CONTENEDOR DE CHECKBOX DE GÉNERO -->
+            <LinearLayout
+                android:id="@+id/boxGenero"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="8dp">
+
+                <CheckBox
+                    android:id="@+id/checkMasculino"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="16dp"
-                    android:hint="Género"
-                    android:textColorHint="@color/black"
-                    android:textColor="@color/black"
-                    android:enabled="false"/>
+                    android:text="Masculino"
+                    android:textColor="@color/black"/>
+
+                <CheckBox
+                    android:id="@+id/checkFemenino"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Femenino"
+                    android:textColor="@color/black"/>
+
+                <CheckBox
+                    android:id="@+id/checkOtro"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Otro"
+                    android:textColor="@color/black"/>
             </LinearLayout>
 
             <!-- ATRIBUTOS -->
@@ -163,7 +185,6 @@
                 android:text="Atributos"
                 android:textSize="16sp"
                 android:textColor="@color/black"
-                android:visibility="visible"
                 android:layout_marginTop="8dp"/>
 
             <!-- CHECKBOX ATRIBUTOS -->
@@ -186,7 +207,7 @@
                 android:textColor="@color/white"
                 android:visibility="gone"/>
 
-            <!-- BOTÓN AÑADIR PUBLICACIÓN -->
+            <!-- AÑADIR PUBLICACIÓN -->
             <ImageView
                 android:id="@+id/btnAddPost"
                 android:layout_width="40dp"

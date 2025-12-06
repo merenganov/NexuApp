@@ -1,289 +1,359 @@
 package com.example.nexu
 
+import android.app.DatePickerDialog
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import java.io.ByteArrayOutputStream
-import android.util.Base64
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import java.util.*
 
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
-    private lateinit var email: String
-    private lateinit var txtAtributos: TextView
-    private lateinit var boxAtributos: LinearLayout
+    private var token: String? = null
+
+    private var currentUserProfile: UserProfile? = null
+    private var allTags: List<Tag> = emptyList()
+    private val tagNameToId = mutableMapOf<String, String>()
 
     private val PICK_IMAGE = 100
-
-    private val listaAtributos = listOf(
-        "Amante de los animales", "Gamer", "Lector habitual", "Deportista", "Fitness",
-        "Aficionado a la astronomía", "Coleccionista", "Bailarin", "Ambientalista",
-        "Minimalista", "Creador de contenido", "Pintor", "Musico", "Diseñador grafico",
-        "Chef", "Profesor", "Medico", "Abogado", "Emprendedor", "Enfermero",
-        "Fotografo", "Progamador", "Escritor"
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
-        // 1️⃣ INICIALIZAR SharedPreferences y email ANTES DE USARLOS
+        // SharedPreferences
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
-        email = sharedPref.getString("currentUser", null) ?: ""
+        token = sharedPref.getString("token", null)
 
-        // 2️⃣ REFERENCIAS UI
-        txtAtributos = findViewById(R.id.txtAtributos)
-        boxAtributos = findViewById(R.id.boxAtributos)
-        val imgPerfil = findViewById<ImageView>(R.id.imgPerfil)
-
-        val txtNombre = findViewById<TextView>(R.id.txtNombre)
-        val edtCarrera = findViewById<EditText>(R.id.edtCarrera)
-        val edtDescripcion = findViewById<EditText>(R.id.edtDescripcion)
-        val edtFecha = findViewById<EditText>(R.id.edtFecha)
-        val edtGenero = findViewById<EditText>(R.id.edtGenero)
-
-        val btnEditar = findViewById<Button>(R.id.btnEditar)
-        val btnFinalizar = findViewById<Button>(R.id.btnFinalizar)
-        val msgCompletar = findViewById<TextView>(R.id.msgCompletar)
-        val btnAddPost = findViewById<ImageView>(R.id.btnAddPost)
-
-        val root = findViewById<View>(android.R.id.content)
-        ThemeManager.applyThemeBackground(this, root)
-
-        // 3️⃣ CARGAR DATOS DEL USUARIO
-        val data = sharedPref.getString(email, null)
-        var nombre = ""
-        var password = ""
-        var carrera = ""
-        var descripcion = ""
-        var fecha = ""
-        var genero = ""
-        var atributos = ""
-
-        if (data != null) {
-            val parts = data.split("#")
-            nombre = parts.getOrNull(0) ?: ""
-            password = parts.getOrNull(1) ?: ""
-            carrera = parts.getOrNull(2) ?: ""
-            descripcion = parts.getOrNull(3) ?: ""
-            fecha = parts.getOrNull(4) ?: ""
-            genero = parts.getOrNull(5) ?: ""
-            atributos = parts.getOrNull(6) ?: ""
+        if (token == null) {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+            return
         }
 
-        // 4️⃣ MOSTRAR DATOS EN PANTALLA
-        findViewById<TextView>(R.id.txtNombreHeader).text = nombre
-        txtNombre.text = nombre
-        edtCarrera.setText(carrera)
-        edtDescripcion.setText(descripcion)
-        edtFecha.setText(fecha)
-        edtGenero.setText(genero)
-        txtAtributos.text = atributos
+        // Fondo dinámico
+        ThemeManager.applyThemeBackground(this, findViewById(android.R.id.content))
 
-        // Foto de perfil guardada (si existe)
-        cargarFotoPerfil(imgPerfil)
+        // 🔹 LISTENERS QUE DEBEN EJECUTARSE SOLO UNA VEZ
+        configurarListenersUnaVez()
 
-        // Mensaje de perfil incompleto
-        val incompleto = carrera.isBlank() || descripcion.isBlank() ||
-                fecha.isBlank() || genero.isBlank() || atributos.isBlank()
-        msgCompletar.visibility = if (incompleto) View.VISIBLE else View.GONE
+        // 🔹 Cargar perfil desde backend
+        cargarPerfilYTags()
+    }
 
-        // Desactivar edición al inicio
-        setEditable(false, edtCarrera, edtDescripcion, edtFecha, edtGenero)
-        btnFinalizar.visibility = View.GONE
+    // =================================================================
+    //  LISTENERS QUE SOLO SE CONFIGURAN UNA VEZ (BOTONES, MENÚ, ETC)
+    // =================================================================
+    private fun configurarListenersUnaVez() {
 
-        // 5️⃣ BOTÓN EDITAR PERFIL
-        btnEditar.setOnClickListener {
-            setEditable(true, edtCarrera, edtDescripcion, edtFecha, edtGenero)
-
-            txtAtributos.visibility = View.GONE
-            boxAtributos.visibility = View.VISIBLE
-
-            val guardados = atributos.split(",")
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-
-            cargarCheckboxAtributos(guardados)
-
-            btnFinalizar.visibility = View.VISIBLE
-            btnEditar.visibility = View.GONE
+        // Botón Editar Perfil
+        findViewById<Button>(R.id.btnEditar).setOnClickListener {
+            entrarEnModoEdicion()
         }
 
-        // 6️⃣ BOTÓN FINALIZAR EDICIÓN
-        btnFinalizar.setOnClickListener {
-            val newCarrera = edtCarrera.text.toString()
-            val newDescripcion = edtDescripcion.text.toString()
-            val newFecha = edtFecha.text.toString()
-            val newGenero = edtGenero.text.toString()
-
-            val seleccionados = mutableListOf<String>()
-            for (i in 0 until boxAtributos.childCount) {
-                val check = boxAtributos.getChildAt(i) as CheckBox
-                if (check.isChecked) seleccionados.add(check.text.toString())
-            }
-            val newAtributos = seleccionados.joinToString(", ")
-
-            val updatedData =
-                "$nombre#$password#$newCarrera#$newDescripcion#$newFecha#$newGenero#$newAtributos"
-
-            sharedPref.edit().putString(email, updatedData).apply()
-
-            txtAtributos.text = newAtributos
-            txtAtributos.visibility = View.VISIBLE
-            boxAtributos.visibility = View.GONE
-
-            Toast.makeText(this, "Perfil actualizado", Toast.LENGTH_SHORT).show()
-
-            btnFinalizar.visibility = View.GONE
-            btnEditar.visibility = View.VISIBLE
-            setEditable(false, edtCarrera, edtDescripcion, edtFecha, edtGenero)
-
-            val incompletoFinal =
-                newCarrera.isBlank() || newDescripcion.isBlank() ||
-                        newFecha.isBlank() || newGenero.isBlank() || newAtributos.isBlank()
-            msgCompletar.visibility = if (incompletoFinal) View.VISIBLE else View.GONE
+        // Botón Finalizar
+        findViewById<Button>(R.id.btnFinalizar).setOnClickListener {
+            guardarCambios()
         }
 
-        // 7️⃣ FOTO DE PERFIL (subir / eliminar)
-        imgPerfil.setOnClickListener {
-            val opciones = arrayOf("Subir foto", "Eliminar foto")
-
-            AlertDialog.Builder(this)
-                .setTitle("Foto de perfil")
-                .setItems(opciones) { _, which ->
-                    when (which) {
-                        0 -> abrirGaleria()
-                        1 -> eliminarFotoPerfil(imgPerfil)
-                    }
-                }.show()
+        // Botón subir foto
+        findViewById<ImageView>(R.id.imgPerfil).setOnClickListener {
+            seleccionarFoto()
         }
 
-        // 8️⃣ BOTÓN NUEVA PUBLICACIÓN
-        btnAddPost.setOnClickListener {
-            val partsUser = sharedPref.getString(email, "")!!.split("#")
-            val atributosActuales = partsUser.last()
-                .split(",")
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-
-            if (atributosActuales.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Primero selecciona atributos en tu perfil",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
-            }
-
-            abrirDialogNuevaPublicacion(nombre, carrera, atributosActuales)
-        }
-        // ⭐ BOTÓN MENÚ SUPERIOR
+        // Menú superior
         val btnMenu = findViewById<ImageView>(R.id.btnMenu)
-
         btnMenu.setOnClickListener {
             val popup = PopupMenu(this, btnMenu)
             popup.menuInflater.inflate(R.menu.menu_profile, popup.menu)
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-
-                    R.id.opCuenta -> {
-                        // Aquí puedes agregar lógica si luego quieres editar cuenta
-                    }
-
                     R.id.opTema -> {
-                        val dialog = AlertDialog.Builder(this).create()
-                        val view = layoutInflater.inflate(R.layout.theme_selector, null)
-
-                        val switchTema = view.findViewById<Switch>(R.id.switchTema)
-                        val imgTema = view.findViewById<ImageView>(R.id.imgTema)
-                        val txtTema = view.findViewById<TextView>(R.id.txtTema)
-
                         val isDark = ThemeManager.isDark(this)
-                        switchTema.isChecked = isDark
+                        ThemeManager.setDark(this, !isDark)
+                        recreate()
 
-                        imgTema.setImageResource(if (isDark) R.drawable.ic_moon else R.drawable.ic_sun)
-                        txtTema.text = if (isDark) "Modo claro" else "Modo oscuro"
-
-                        switchTema.setOnCheckedChangeListener { _, checked ->
-                            ThemeManager.setDark(this, checked)
-                            dialog.dismiss()
-                            recreate()
-                        }
-
-                        dialog.setView(view)
-                        dialog.show()
                     }
-
                     R.id.opCerrar -> {
-                        val builder = AlertDialog.Builder(this)
-                        builder.setTitle("Cerrar sesión")
-                        builder.setMessage("¿Estás seguro de que deseas cerrar sesión?")
-
-                        builder.setPositiveButton("Sí") { dialog, _ ->
-                            startActivity(Intent(this, LoginActivity::class.java))
-                            finish()
-                            dialog.dismiss()
-                        }
-
-                        builder.setNegativeButton("No") { d, _ -> d.dismiss() }
-                        builder.create().show()
+                        AlertDialog.Builder(this)
+                            .setTitle("Cerrar sesión")
+                            .setMessage("¿Deseas salir?")
+                            .setPositiveButton("Sí") { _, _ ->
+                                startActivity(Intent(this, LoginActivity::class.java))
+                                finish()
+                            }
+                            .setNegativeButton("No", null)
+                            .show()
                     }
                 }
                 true
             }
-
             popup.show()
         }
 
-
-        // 9️⃣ NAV inferior
+        // Navegación inferior
         findViewById<LinearLayout>(R.id.navHome).setOnClickListener {
             startActivity(Intent(this, HomeActivity::class.java))
             finish()
         }
+
         findViewById<LinearLayout>(R.id.navMessages).setOnClickListener {
             startActivity(Intent(this, MessagesActivity::class.java))
             finish()
         }
-
-        // 🔟 PUBLICACIONES DEL USUARIO
-        val rvPub = findViewById<RecyclerView>(R.id.rvPublicaciones)
-        rvPub.layoutManager = LinearLayoutManager(this)
-        rvPub.adapter = PostAdapter(
-            context = this,
-            lista = obtenerPublicacionesUsuario(),
-
-            // Ya NO existe onEdit en el nuevo adapter, lo implementamos manualmente usando el menú
-            onDelete = { post ->
-                eliminarPublicacion(post)
-            },
-
-            // Qué hacer cuando el usuario toca una publicación dentro de su perfil
-            // Aquí NO debe abrir chat porque son publicaciones propias
-            onItemClick = { post ->
-                // En el perfil, la acción natural es EDITAR la publicación cuando se toca
-                editarPublicacion(post)
-            }
-        )
-
     }
 
-    // ================================================================
-    // FOTO DE PERFIL
-    // ================================================================
+    // =================================================================
+    // CARGAR PERFIL Y TAGS DESDE BACKEND
+    // =================================================================
+    private fun cargarPerfilYTags() {
 
-    private fun abrirGaleria() {
+        val t = token ?: return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val profileRes = RetrofitClient.api.getUserProfile("Bearer $t")
+                val tagsRes = RetrofitClient.api.getTags("Bearer $t")
+
+                if (profileRes.isSuccessful && tagsRes.isSuccessful) {
+
+                    currentUserProfile = profileRes.body()?.data
+                    allTags = tagsRes.body()?.data ?: emptyList()
+
+                    tagNameToId.clear()
+                    allTags.forEach { tag -> tagNameToId[tag.name] = tag.id }
+
+                    withContext(Dispatchers.Main) {
+                        mostrarPerfilEnUI(currentUserProfile!!)
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProfileActivity, "Error cargando datos", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // =================================================================
+    // MOSTRAR LOS DATOS DEL PERFIL EN PANTALLA
+    // =================================================================
+    private fun mostrarPerfilEnUI(profile: UserProfile) {
+
+        findViewById<TextView>(R.id.txtNombreHeader).text = profile.name
+        findViewById<TextView>(R.id.txtNombre).text = profile.name
+
+        findViewById<EditText>(R.id.edtCarrera).setText(profile.career ?: "")
+        findViewById<EditText>(R.id.edtDescripcion).setText(profile.bio ?: "")
+        findViewById<EditText>(R.id.edtFecha).setText(profile.date_of_birth ?: "")
+        findViewById<EditText>(R.id.edtGenero).setText(profile.gender ?: "")
+
+        val atributosTxt = profile.tags?.joinToString(", ") ?: ""
+        findViewById<TextView>(R.id.txtAtributos).text = atributosTxt
+        
+
+        // Mensaje de perfil incompleto
+        val incompleto = (
+                profile.career.isNullOrBlank()
+                        || profile.bio.isNullOrBlank()
+                        || profile.date_of_birth.isNullOrBlank()
+                        || profile.gender.isNullOrBlank()
+                        || atributosTxt.isBlank()
+                )
+
+        findViewById<TextView>(R.id.msgCompletar).visibility =
+            if (incompleto) View.VISIBLE else View.GONE
+
+
+        // Asegurar que está en modo vista
+        salirDeModoEdicion()
+    }
+
+    // =================================================================
+    // ENTRAR EN MODO EDICIÓN
+    // =================================================================
+    private fun entrarEnModoEdicion() {
+
+        setEditable(true)
+
+        findViewById<EditText>(R.id.edtGenero).visibility = View.GONE
+        findViewById<LinearLayout>(R.id.boxGenero).visibility = View.VISIBLE
+        prepararCheckboxGenero()
+
+        findViewById<TextView>(R.id.txtAtributos).visibility = View.GONE
+        findViewById<LinearLayout>(R.id.boxAtributos).visibility = View.VISIBLE
+        cargarCheckboxAtributos()
+
+        findViewById<Button>(R.id.btnEditar).visibility = View.GONE
+        findViewById<Button>(R.id.btnFinalizar).visibility = View.VISIBLE
+
+        findViewById<EditText>(R.id.edtFecha).setOnClickListener { abrirDatePicker() }
+    }
+
+    // =================================================================
+    // SALIR DEL MODO EDICIÓN
+    // =================================================================
+    private fun salirDeModoEdicion() {
+
+        setEditable(false)
+
+        findViewById<EditText>(R.id.edtGenero).visibility = View.VISIBLE
+        findViewById<LinearLayout>(R.id.boxGenero).visibility = View.GONE
+
+        findViewById<TextView>(R.id.txtAtributos).visibility = View.VISIBLE
+        findViewById<LinearLayout>(R.id.boxAtributos).visibility = View.GONE
+
+        findViewById<Button>(R.id.btnFinalizar).visibility = View.GONE
+        findViewById<Button>(R.id.btnEditar).visibility = View.VISIBLE
+    }
+
+    // =================================================================
+    // HABILITAR / DESHABILITAR CAMPOS EDITABLES
+    // =================================================================
+    private fun setEditable(enable: Boolean) {
+        val campos = listOf(
+            findViewById<EditText>(R.id.edtCarrera),
+            findViewById<EditText>(R.id.edtDescripcion),
+            findViewById<EditText>(R.id.edtFecha)
+        )
+        campos.forEach { it.isEnabled = enable }
+    }
+
+    // =================================================================
+    // CHECKBOX DE GÉNERO (solo uno seleccionado)
+    // =================================================================
+    private fun prepararCheckboxGenero() {
+
+        val checkM = findViewById<CheckBox>(R.id.checkMasculino)
+        val checkF = findViewById<CheckBox>(R.id.checkFemenino)
+        val checkO = findViewById<CheckBox>(R.id.checkOtro)
+
+        val grupo = listOf(checkM, checkF, checkO)
+
+        grupo.forEach { cb ->
+            cb.isChecked = false
+            cb.setOnCheckedChangeListener { _, checked ->
+                if (checked) grupo.filter { it != cb }.forEach { it.isChecked = false }
+            }
+        }
+    }
+
+    // =================================================================
+    // CHECKBOX DE ATRIBUTOS
+    // =================================================================
+    private fun cargarCheckboxAtributos() {
+        val layout = findViewById<LinearLayout>(R.id.boxAtributos)
+        layout.removeAllViews()
+
+        val seleccionados = currentUserProfile?.tags ?: emptyList()
+
+        for (tag in allTags) {
+            val check = CheckBox(this)
+            check.text = tag.name
+            check.isChecked = seleccionados.contains(tag.name)
+            layout.addView(check)
+        }
+    }
+
+    // =================================================================
+    // GUARDAR CAMBIOS (PUT /users/me)
+    // =================================================================
+    private fun guardarCambios() {
+
+        val carrera = findViewById<EditText>(R.id.edtCarrera).text.toString()
+        val bio = findViewById<EditText>(R.id.edtDescripcion).text.toString()
+        val fecha = findViewById<EditText>(R.id.edtFecha).text.toString()
+
+        val genero =
+            when {
+                findViewById<CheckBox>(R.id.checkMasculino).isChecked -> "Masculino"
+                findViewById<CheckBox>(R.id.checkFemenino).isChecked -> "Femenino"
+                findViewById<CheckBox>(R.id.checkOtro).isChecked -> "Otro"
+                else -> ""
+            }
+
+        val box = findViewById<LinearLayout>(R.id.boxAtributos)
+        val seleccionados = mutableListOf<String>()
+
+        for (i in 0 until box.childCount) {
+            val cb = box.getChildAt(i) as CheckBox
+            if (cb.isChecked) seleccionados.add(cb.text.toString())
+        }
+
+        val ids = seleccionados.mapNotNull { tagNameToId[it] }
+
+        val req = UpdateProfileRequest(
+            career = carrera,
+            bio = bio,
+            date_of_birth = fecha,
+            gender = genero,
+            tag_ids = ids
+        )
+
+        val t = token ?: return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val res = RetrofitClient.api.updateUserProfile("Bearer $t", req)
+
+                withContext(Dispatchers.Main) {
+                    if (res.isSuccessful) {
+                        currentUserProfile = res.body()?.data
+                        mostrarPerfilEnUI(currentUserProfile!!)
+                        Toast.makeText(this@ProfileActivity, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ProfileActivity, "Error actualizando perfil", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // =================================================================
+    // DATE PICKER
+    // =================================================================
+    private fun abrirDatePicker() {
+        val cal = Calendar.getInstance()
+        val dialog = DatePickerDialog(
+            this,
+            { _, y, m, d ->
+                findViewById<EditText>(R.id.edtFecha).setText(
+                    "$y-${(m + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, "0"[0])}"
+                )
+            },
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH),
+            cal.get(Calendar.DAY_OF_MONTH)
+        )
+        dialog.show()
+    }
+
+    // =================================================================
+    // SUBIR FOTO AL BACKEND
+    // =================================================================
+    private fun seleccionarFoto() {
         val intent = Intent(Intent.ACTION_PICK)
         intent.type = "image/*"
         startActivityForResult(intent, PICK_IMAGE)
@@ -294,207 +364,44 @@ class ProfileActivity : AppCompatActivity() {
 
         if (requestCode == PICK_IMAGE && resultCode == RESULT_OK) {
             val uri = data?.data ?: return
-            val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
-
-            // Guardar imagen codificada en SharedPreferences
-            guardarImagenEnShared(bitmap)
-
-            // Mostrar en ImageView
-            findViewById<ImageView>(R.id.imgPerfil).setImageBitmap(bitmap)
+            subirFotoAlBackend(uri)
         }
     }
 
-    private fun guardarImagenEnShared(bitmap: Bitmap) {
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        val bytes = baos.toByteArray()
-        val base64 = Base64.encodeToString(bytes, Base64.DEFAULT)
+    private fun subirFotoAlBackend(uri: Uri) {
 
-        sharedPref.edit().putString("${email}_foto", base64).apply()
-    }
+        val t = token ?: return
 
-    private fun cargarFotoPerfil(imgPerfil: ImageView) {
-        val fotoBase64 = sharedPref.getString("${email}_foto", null) ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val bytes = contentResolver.openInputStream(uri)?.readBytes() ?: return@launch
 
-        val bytes = Base64.decode(fotoBase64, Base64.DEFAULT)
-        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-        imgPerfil.setImageBitmap(bitmap)
-    }
+                val reqFile: RequestBody = bytes.toRequestBody("image/*".toMediaTypeOrNull())
 
-    private fun eliminarFotoPerfil(imgPerfil: ImageView) {
-        sharedPref.edit().remove("${email}_foto").apply()
-        imgPerfil.setImageResource(R.drawable.ic_profile)
-        Toast.makeText(this, "Foto eliminada", Toast.LENGTH_SHORT).show()
-    }
-
-    // ================================================================
-    // PUBLICACIONES
-    // ================================================================
-
-    private fun guardarPublicacion(nombre: String, carrera: String, tag: String, texto: String) {
-        // ahora también guardamos el email del autor
-        val post = "$nombre|$carrera|$tag|$texto|$email"
-        val key = "${email}_posts"
-        val current = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
-
-        current.add(post)
-        sharedPref.edit().putStringSet(key, current).apply()
-
-        Toast.makeText(this, "Publicación creada", Toast.LENGTH_SHORT).show()
-    }
-
-
-    private fun obtenerPublicacionesUsuario(): List<Post> {
-        val key = "${email}_posts"
-        val raw = sharedPref.getStringSet(key, emptySet()) ?: emptySet()
-
-        return raw.mapNotNull { s ->
-            val p = s.split("|")
-            when (p.size) {
-                4 -> Post(
-                    nombre = p[0],
-                    carrera = p[1],
-                    tag = p[2],
-                    contenido = p[3],
-                    emailAutor = email       // como es tu perfil, el autor eres tú
+                val body = MultipartBody.Part.createFormData(
+                    "avatar",
+                    "profile.jpg",
+                    reqFile
                 )
-                5 -> Post(
-                    nombre = p[0],
-                    carrera = p[1],
-                    tag = p[2],
-                    contenido = p[3],
-                    emailAutor = p[4]
-                )
-                else -> null
+
+                val res = RetrofitClient.api.uploadAvatar("Bearer $t", body)
+
+                withContext(Dispatchers.Main) {
+                    if (res.isSuccessful) {
+                        currentUserProfile = res.body()?.data
+                        mostrarPerfilEnUI(currentUserProfile!!)
+                        Toast.makeText(this@ProfileActivity, "Foto actualizada", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@ProfileActivity, "Error al subir foto", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             }
-        }
-    }
-
-
-    private fun abrirDialogNuevaPublicacion(
-        nombre: String,
-        carrera: String,
-        atributos: List<String>
-    ) {
-        val dialog = AlertDialog.Builder(this).create()
-        val view = layoutInflater.inflate(R.layout.dialog_new_post, null)
-
-        val txtNombre = view.findViewById<TextView>(R.id.txtDialogNombre)
-        val txtCarrera = view.findViewById<TextView>(R.id.txtDialogCarrera)
-        val spinnerTags = view.findViewById<Spinner>(R.id.spinnerTags)
-        val edtText = view.findViewById<EditText>(R.id.edtPostText)
-        val btnPublicar = view.findViewById<Button>(R.id.btnPublicar)
-
-        txtNombre.text = nombre
-        txtCarrera.text = carrera
-
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, atributos)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTags.adapter = adapter
-
-        btnPublicar.setOnClickListener {
-            val tag = spinnerTags.selectedItem.toString()
-            val texto = edtText.text.toString().trim()
-
-            if (texto.isBlank()) {
-                Toast.makeText(this, "Escribe algo para publicar", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            guardarPublicacion(nombre, carrera, tag, texto)
-            dialog.dismiss()
-            recargarPublicaciones()
-        }
-
-        dialog.setView(view)
-        dialog.show()
-    }
-
-    private fun editarPublicacion(post: Post) {
-        val dialog = AlertDialog.Builder(this).create()
-        val view = layoutInflater.inflate(R.layout.dialog_new_post, null)
-
-        val edtText = view.findViewById<EditText>(R.id.edtPostText)
-        val spinnerTags = view.findViewById<Spinner>(R.id.spinnerTags)
-        val btnPublicar = view.findViewById<Button>(R.id.btnPublicar)
-
-        edtText.setText(post.contenido)
-
-        val data = sharedPref.getString(email, "")!!.split("#")
-        val atributos = data.last()
-            .split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, atributos)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTags.adapter = adapter
-        spinnerTags.setSelection(atributos.indexOf(post.tag))
-
-        btnPublicar.setOnClickListener {
-            val nuevoTexto = edtText.text.toString()
-            val nuevoTag = spinnerTags.selectedItem.toString()
-            actualizarPublicacion(post, nuevoTag, nuevoTexto)
-            dialog.dismiss()
-        }
-
-        dialog.setView(view)
-        dialog.show()
-    }
-
-    private fun actualizarPublicacion(post: Post, nuevoTag: String, nuevoTexto: String) {
-        val key = "${email}_posts"
-        val current = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
-
-        val vieja = "${post.nombre}|${post.carrera}|${post.tag}|${post.contenido}"
-        val nueva = "${post.nombre}|${post.carrera}|$nuevoTag|$nuevoTexto"
-
-        current.remove(vieja)
-        current.add(nueva)
-
-        sharedPref.edit().putStringSet(key, current).apply()
-        recargarPublicaciones()
-    }
-
-    private fun eliminarPublicacion(post: Post) {
-        val key = "${email}_posts"
-        val current = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
-
-        val cadena = "${post.nombre}|${post.carrera}|${post.tag}|${post.contenido}"
-        current.remove(cadena)
-
-        sharedPref.edit().putStringSet(key, current).apply()
-        recargarPublicaciones()
-    }
-
-    private fun recargarPublicaciones() {
-        val rvPub = findViewById<RecyclerView>(R.id.rvPublicaciones)
-        rvPub.adapter = PostAdapter(
-            context = this,
-            lista = obtenerPublicacionesUsuario(),
-            onDelete = { post -> eliminarPublicacion(post) },
-            onItemClick = { post -> editarPublicacion(post) }
-        )
-
-    }
-
-    // ================================================================
-    // UTILIDADES
-    // ================================================================
-
-    private fun setEditable(state: Boolean, vararg fields: EditText) {
-        fields.forEach { it.isEnabled = state }
-    }
-
-    private fun cargarCheckboxAtributos(atributosSeleccionados: List<String>) {
-        boxAtributos.removeAllViews()
-        for (atributo in listaAtributos) {
-            val check = CheckBox(this).apply {
-                text = atributo
-                setTextColor(resources.getColor(R.color.black))
-                isChecked = atributosSeleccionados.contains(atributo)
-            }
-            boxAtributos.addView(check)
         }
     }
 }
