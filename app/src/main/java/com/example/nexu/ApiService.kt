@@ -11,6 +11,8 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Call
+import retrofit2.http.DELETE
 import retrofit2.http.Multipart
 import retrofit2.http.PUT
 import retrofit2.http.Part
@@ -143,8 +145,9 @@ interface ApiService {
 
     @GET("tags/")
     suspend fun getTags(
-        @Header("Authorization") token: String
-    ): Response<TagsResponse>
+        @Header("Authorization") auth: String
+    ): Response<TagResponse>
+
 
     @Multipart
     @POST("users/upload_avatar")
@@ -152,6 +155,29 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Part avatar: okhttp3.MultipartBody.Part
     ): Response<UserProfileResponse>
+
+    @GET("posts/")
+    suspend fun getPosts(
+        @Header("Authorization") auth: String
+    ): Response<PostsResponse>
+
+
+    @POST("posts/")
+    suspend fun createPost(
+        @Header("Authorization") auth: String,
+        @Body body: CreatePostRequest
+    ): Response<CreatePostResponse>
+
+
+    @DELETE("posts/{id}")
+    suspend fun deletePost(
+        @Header("Authorization") auth: String,
+        @Path("id") postId: String
+    ): Response<DeletePostResponse>
+
+
+
+
 
 
 }

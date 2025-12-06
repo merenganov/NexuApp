@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import android.widget.PopupMenu
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -16,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.util.*
@@ -24,44 +24,71 @@ import java.util.*
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
-    private var token: String? = null
+    private lateinit var api: ApiService
+
+    private lateinit var jwtToken: String
+    private lateinit var currentUserId: String
 
     private var currentUserProfile: UserProfile? = null
-    private var allTags: List<Tag> = emptyList()
+    private var allTags: List<TagPostData> = emptyList()
     private val tagNameToId = mutableMapOf<String, String>()
 
     private val PICK_IMAGE = 100
 
+    private lateinit var rvPublicaciones: androidx.recyclerview.widget.RecyclerView
+    private lateinit var postAdapter: PostAdapter
+
+
+    // =================================================================
+    // ON CREATE
+    // =================================================================
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
-        // SharedPreferences
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
-        token = sharedPref.getString("token", null)
+        api = RetrofitClient.api
 
-        if (token == null) {
+        jwtToken = sharedPref.getString("token", "") ?: ""
+        currentUserId = sharedPref.getString("user_id", "") ?: ""
+
+        if (jwtToken.isEmpty()) {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
         }
 
-        // Fondo dinámico
         ThemeManager.applyThemeBackground(this, findViewById(android.R.id.content))
 
-        // 🔹 LISTENERS QUE DEBEN EJECUTARSE SOLO UNA VEZ
         configurarListenersUnaVez()
-
-        // 🔹 Cargar perfil desde backend
         cargarPerfilYTags()
+
+        // RecyclerView de publicaciones
+        rvPublicaciones = findViewById(R.id.rvPublicaciones)
+        postAdapter = PostAdapter(
+            this,
+            mutableListOf(),
+            onDelete = { post -> confirmarYEliminar(post) },
+            onItemClick = {}
+        )
+        rvPublicaciones.layoutManager = LinearLayoutManager(this)
+        rvPublicaciones.adapter = postAdapter
+
+        // Botón "+"
+        findViewById<ImageView>(R.id.btnAddPost).setOnClickListener {
+            mostrarDialogCrearPost()
+        }
+
+        cargarMisPosts()
     }
 
+
     // =================================================================
-    //  LISTENERS QUE SOLO SE CONFIGURAN UNA VEZ (BOTONES, MENÚ, ETC)
+    // LISTENERS FIJOS (botones, menú, nav)
     // =================================================================
     private fun configurarListenersUnaVez() {
 
-        // Botón Editar Perfil
+        // Botón Editar
         findViewById<Button>(R.id.btnEditar).setOnClickListener {
             entrarEnModoEdicion()
         }
@@ -71,12 +98,12 @@ class ProfileActivity : AppCompatActivity() {
             guardarCambios()
         }
 
-        // Botón subir foto
+        // Foto de perfil
         findViewById<ImageView>(R.id.imgPerfil).setOnClickListener {
             seleccionarFoto()
         }
 
-        // Menú superior
+        // Menú superior (tema / cerrar sesión)
         val btnMenu = findViewById<ImageView>(R.id.btnMenu)
         btnMenu.setOnClickListener {
             val popup = PopupMenu(this, btnMenu)
@@ -88,7 +115,6 @@ class ProfileActivity : AppCompatActivity() {
                         val isDark = ThemeManager.isDark(this)
                         ThemeManager.setDark(this, !isDark)
                         recreate()
-
                     }
                     R.id.opCerrar -> {
                         AlertDialog.Builder(this)
@@ -107,53 +133,65 @@ class ProfileActivity : AppCompatActivity() {
             popup.show()
         }
 
-        // Navegación inferior
+        // NAV inferior
         findViewById<LinearLayout>(R.id.navHome).setOnClickListener {
             startActivity(Intent(this, HomeActivity::class.java))
             finish()
         }
-
         findViewById<LinearLayout>(R.id.navMessages).setOnClickListener {
             startActivity(Intent(this, MessagesActivity::class.java))
             finish()
         }
     }
 
+
     // =================================================================
-    // CARGAR PERFIL Y TAGS DESDE BACKEND
+    // CARGAR PERFIL + TAGS
     // =================================================================
     private fun cargarPerfilYTags() {
-
-        val t = token ?: return
-
         lifecycleScope.launch(Dispatchers.IO) {
+
             try {
-                val profileRes = RetrofitClient.api.getUserProfile("Bearer $t")
-                val tagsRes = RetrofitClient.api.getTags("Bearer $t")
+                val profileRes = api.getUserProfile("Bearer $jwtToken")
+                val tagsRes = api.getTags("Bearer $jwtToken")
 
                 if (profileRes.isSuccessful && tagsRes.isSuccessful) {
 
                     currentUserProfile = profileRes.body()?.data
-                    allTags = tagsRes.body()?.data ?: emptyList()
+                    allTags = tagsRes.body()?.data ?: emptyList<TagPostData>()
 
                     tagNameToId.clear()
-                    allTags.forEach { tag -> tagNameToId[tag.name] = tag.id }
+                    allTags.forEach { tagNameToId[it.name] = it.id }
 
                     withContext(Dispatchers.Main) {
-                        mostrarPerfilEnUI(currentUserProfile!!)
+                        currentUserProfile?.let { mostrarPerfilEnUI(it) }
+                    }
+
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Error al cargar perfil",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ProfileActivity, "Error cargando datos", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
     }
 
+
     // =================================================================
-    // MOSTRAR LOS DATOS DEL PERFIL EN PANTALLA
+    // MOSTRAR PERFIL EN UI
     // =================================================================
     private fun mostrarPerfilEnUI(profile: UserProfile) {
 
@@ -167,40 +205,259 @@ class ProfileActivity : AppCompatActivity() {
 
         val atributosTxt = profile.tags?.joinToString(", ") ?: ""
         findViewById<TextView>(R.id.txtAtributos).text = atributosTxt
-        val imgPerfil = findViewById<ImageView>(R.id.imgPerfil)
 
+        val img = findViewById<ImageView>(R.id.imgPerfil)
         if (!profile.avatar_url.isNullOrBlank()) {
             Glide.with(this)
                 .load(profile.avatar_url)
                 .placeholder(R.drawable.ic_profile)
-                .into(imgPerfil)
+                .into(img)
         }
 
-
-        // Mensaje de perfil incompleto
-        val incompleto = (
-                profile.career.isNullOrBlank()
-                        || profile.bio.isNullOrBlank()
-                        || profile.date_of_birth.isNullOrBlank()
-                        || profile.gender.isNullOrBlank()
-                        || atributosTxt.isBlank()
-                )
+        // Mensaje de "termina tu perfil"
+        val incompleto =
+            profile.career.isNullOrBlank() ||
+                    profile.bio.isNullOrBlank() ||
+                    profile.date_of_birth.isNullOrBlank() ||
+                    profile.gender.isNullOrBlank() ||
+                    atributosTxt.isBlank()
 
         findViewById<TextView>(R.id.msgCompletar).visibility =
             if (incompleto) View.VISIBLE else View.GONE
 
-
-        // Asegurar que está en modo vista
         salirDeModoEdicion()
     }
 
+
     // =================================================================
-    // ENTRAR EN MODO EDICIÓN
+    // POSTS DEL USUARIO
+    // =================================================================
+    private fun cargarMisPosts() {
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            try {
+                val res = api.getPosts("Bearer $jwtToken")
+
+                if (!res.isSuccessful) return@launch
+
+                val posts = res.body()?.data ?: emptyList()
+
+                val filtrados = posts.filter { it.user.id == currentUserId }
+
+                withContext(Dispatchers.Main) {
+                    postAdapter.setPosts(filtrados)
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+
+    // =================================================================
+    // CREAR POST
+    // =================================================================
+    private fun mostrarDialogCrearPost() {
+
+        val view = layoutInflater.inflate(R.layout.dialog_create_post, null)
+        val spinner = view.findViewById<Spinner>(R.id.spinnerTags)
+        val edtDesc = view.findViewById<EditText>(R.id.edtDescripcionPost)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            try {
+                val tRes = api.getTags("Bearer $jwtToken")
+
+                if (tRes.isSuccessful) {
+                    val tags = tRes.body()?.data ?: emptyList()
+                    val nombres = tags.map { it.name }
+
+                    withContext(Dispatchers.Main) {
+                        spinner.adapter = ArrayAdapter(
+                            this@ProfileActivity,
+                            android.R.layout.simple_spinner_dropdown_item,
+                            nombres
+                        )
+
+                        AlertDialog.Builder(this@ProfileActivity)
+                            .setTitle("Nueva publicación")
+                            .setView(view)
+                            .setPositiveButton("Publicar") { _, _ ->
+                                val desc = edtDesc.text.toString().trim()
+                                if (desc.isBlank()) {
+                                    Toast.makeText(
+                                        this@ProfileActivity,
+                                        "Escribe algo",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@setPositiveButton
+                                }
+                                crearPost(tags[spinner.selectedItemPosition].id, desc)
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .show()
+                    }
+
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+
+    private fun crearPost(tagId: String, desc: String) {
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            try {
+                val body = CreatePostRequest(tag_id = tagId, description = desc)
+                val res = api.createPost("Bearer $jwtToken", body)
+
+                if (res.isSuccessful) {
+                    cargarMisPosts()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Publicado 🎉",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+
+    // =================================================================
+    // ELIMINAR POST
+    // =================================================================
+    private fun confirmarYEliminar(post: Post) {
+        AlertDialog.Builder(this)
+            .setTitle("Eliminar")
+            .setMessage("¿Eliminar esta publicación?")
+            .setPositiveButton("Sí") { _, _ -> eliminarPost(post) }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun eliminarPost(post: Post) {
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            try {
+                val res = api.deletePost("Bearer $jwtToken", post.id)
+
+                if (res.isSuccessful) {
+                    withContext(Dispatchers.Main) {
+                        postAdapter.removePostById(post.id)
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Publicación eliminada",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+
+    // =================================================================
+    // SUBIR FOTO
+    // =================================================================
+    private fun seleccionarFoto() {
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "image/*"
+        startActivityForResult(intent, PICK_IMAGE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK) {
+            data?.data?.let { subirFotoAlBackend(it) }
+        }
+    }
+
+    private fun subirFotoAlBackend(uri: Uri) {
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            try {
+                val bytes = contentResolver.openInputStream(uri)!!.readBytes()
+                val reqFile = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+                val body = MultipartBody.Part.createFormData("avatar", "profile.jpg", reqFile)
+
+                val res = api.uploadAvatar("Bearer $jwtToken", body)
+
+                if (res.isSuccessful) {
+                    currentUserProfile = res.body()?.data
+
+                    withContext(Dispatchers.Main) {
+                        Glide.with(this@ProfileActivity)
+                            .load(currentUserProfile?.avatar_url)
+                            .placeholder(R.drawable.ic_profile)
+                            .into(findViewById(R.id.imgPerfil))
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        cargarPerfilYTags()
+        cargarMisPosts()
+    }
+
+
+    // =================================================================
+    // MODO EDICIÓN
     // =================================================================
     private fun entrarEnModoEdicion() {
-
         setEditable(true)
-
         findViewById<EditText>(R.id.edtGenero).visibility = View.GONE
         findViewById<LinearLayout>(R.id.boxGenero).visibility = View.VISIBLE
         prepararCheckboxGenero()
@@ -211,77 +468,56 @@ class ProfileActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnEditar).visibility = View.GONE
         findViewById<Button>(R.id.btnFinalizar).visibility = View.VISIBLE
-
         findViewById<EditText>(R.id.edtFecha).setOnClickListener { abrirDatePicker() }
     }
 
-    // =================================================================
-    // SALIR DEL MODO EDICIÓN
-    // =================================================================
     private fun salirDeModoEdicion() {
-
         setEditable(false)
-
         findViewById<EditText>(R.id.edtGenero).visibility = View.VISIBLE
         findViewById<LinearLayout>(R.id.boxGenero).visibility = View.GONE
-
         findViewById<TextView>(R.id.txtAtributos).visibility = View.VISIBLE
         findViewById<LinearLayout>(R.id.boxAtributos).visibility = View.GONE
-
         findViewById<Button>(R.id.btnFinalizar).visibility = View.GONE
         findViewById<Button>(R.id.btnEditar).visibility = View.VISIBLE
     }
 
-    // =================================================================
-    // HABILITAR / DESHABILITAR CAMPOS EDITABLES
-    // =================================================================
     private fun setEditable(enable: Boolean) {
         val campos = listOf(
             findViewById<EditText>(R.id.edtCarrera),
             findViewById<EditText>(R.id.edtDescripcion),
-            findViewById<EditText>(R.id.edtFecha)
+            findViewById<EditText>(R.id.edtFecha),
         )
         campos.forEach { it.isEnabled = enable }
     }
 
-    // =================================================================
-    // CHECKBOX DE GÉNERO (solo uno seleccionado)
-    // =================================================================
     private fun prepararCheckboxGenero() {
-
-        val checkM = findViewById<CheckBox>(R.id.checkMasculino)
-        val checkF = findViewById<CheckBox>(R.id.checkFemenino)
-        val checkO = findViewById<CheckBox>(R.id.checkOtro)
-
-        val grupo = listOf(checkM, checkF, checkO)
-
-        grupo.forEach { cb ->
+        val group = listOf(
+            findViewById<CheckBox>(R.id.checkMasculino),
+            findViewById<CheckBox>(R.id.checkFemenino),
+            findViewById<CheckBox>(R.id.checkOtro)
+        )
+        group.forEach { cb ->
             cb.isChecked = false
             cb.setOnCheckedChangeListener { _, checked ->
-                if (checked) grupo.filter { it != cb }.forEach { it.isChecked = false }
+                if (checked) group.filter { it != cb }.forEach { it.isChecked = false }
             }
         }
     }
 
-    // =================================================================
-    // CHECKBOX DE ATRIBUTOS
-    // =================================================================
     private fun cargarCheckboxAtributos() {
         val layout = findViewById<LinearLayout>(R.id.boxAtributos)
         layout.removeAllViews()
-
-        val seleccionados = currentUserProfile?.tags ?: emptyList()
-
+        val sel = currentUserProfile?.tags ?: emptyList()
         for (tag in allTags) {
-            val check = CheckBox(this)
-            check.text = tag.name
-            check.isChecked = seleccionados.contains(tag.name)
-            layout.addView(check)
+            val c = CheckBox(this)
+            c.text = tag.name
+            c.isChecked = sel.contains(tag.name)
+            layout.addView(c)
         }
     }
 
     // =================================================================
-    // GUARDAR CAMBIOS (PUT /users/me)
+    // GUARDAR CAMBIOS DE PERFIL
     // =================================================================
     private fun guardarCambios() {
 
@@ -289,10 +525,14 @@ class ProfileActivity : AppCompatActivity() {
         val bio = findViewById<EditText>(R.id.edtDescripcion).text.toString()
         val fecha = findViewById<EditText>(R.id.edtFecha).text.toString()
 
-        
+        // Validar fecha ISO YYYY-MM-DD
         val isoRegex = Regex("\\d{4}-\\d{2}-\\d{2}")
         if (!fecha.matches(isoRegex)) {
-            Toast.makeText(this, "Formato de fecha inválido. Usa YYYY-MM-DD", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                "Formato de fecha inválido. Usa YYYY-MM-DD",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
 
@@ -322,45 +562,54 @@ class ProfileActivity : AppCompatActivity() {
             tag_ids = ids
         )
 
-        val t = token ?: return
+        if (jwtToken.isEmpty()) return
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val res = RetrofitClient.api.updateUserProfile("Bearer $t", req)
+                val res = api.updateUserProfile("Bearer $jwtToken", req)
 
                 withContext(Dispatchers.Main) {
                     if (res.isSuccessful) {
                         currentUserProfile = res.body()?.data
-                        mostrarPerfilEnUI(currentUserProfile!!)
-                        Toast.makeText(this@ProfileActivity, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                        currentUserProfile?.let { mostrarPerfilEnUI(it) }
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Perfil actualizado",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(this@ProfileActivity, "Error actualizando perfil", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Error actualizando perfil",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
             } catch (e: Exception) {
-
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
     }
-
 
     // =================================================================
     // DATE PICKER
     // =================================================================
     private fun abrirDatePicker() {
         val cal = Calendar.getInstance()
+
         val dialog = DatePickerDialog(
             this,
-            { _, year, month, day ->
+            { _, year, month, dayOfMonth ->
                 val mm = (month + 1).toString().padStart(2, '0')
-                val dd = day.toString().padStart(2, '0')
-
-                // FORMATO ISO-8601 GARANTIZADO
-                val fechaISO = "$year-$mm-$dd"
+                val dd = dayOfMonth.toString().padStart(2, '0')
+                val fechaISO = "$year-$mm-$dd"   // YYYY-MM-DD
 
                 findViewById<EditText>(R.id.edtFecha).setText(fechaISO)
             },
@@ -368,82 +617,7 @@ class ProfileActivity : AppCompatActivity() {
             cal.get(Calendar.MONTH),
             cal.get(Calendar.DAY_OF_MONTH)
         )
+
         dialog.show()
     }
-
-
-    // =================================================================
-    // SUBIR FOTO AL BACKEND
-    // =================================================================
-    private fun seleccionarFoto() {
-        val intent = Intent(Intent.ACTION_PICK)
-        intent.type = "image/*"
-        startActivityForResult(intent, PICK_IMAGE)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == PICK_IMAGE && resultCode == RESULT_OK) {
-            val uri = data?.data ?: return
-            subirFotoAlBackend(uri)
-        }
-    }
-
-    private fun subirFotoAlBackend(uri: Uri) {
-
-        val t = token ?: return
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val bytes = contentResolver.openInputStream(uri)?.readBytes() ?: return@launch
-
-                val reqFile: RequestBody =
-                    bytes.toRequestBody("image/*".toMediaTypeOrNull())
-
-                val body = MultipartBody.Part.createFormData(
-                    "avatar",
-                    "profile.jpg",
-                    reqFile
-                )
-
-                val res = RetrofitClient.api.uploadAvatar("Bearer $t", body)
-
-                withContext(Dispatchers.Main) {
-                    if (res.isSuccessful) {
-
-                        currentUserProfile = res.body()?.data
-
-                        val nuevaFoto = currentUserProfile?.avatar_url
-
-                        // 🟢 SE ACTUALIZA EN PANTALLA INMEDIATAMENTE
-                        if (!nuevaFoto.isNullOrBlank()) {
-                            Glide.with(this@ProfileActivity)
-                                .load(nuevaFoto)
-                                .placeholder(R.drawable.ic_profile)
-                                .into(findViewById(R.id.imgPerfil))
-                        }
-
-                        Toast.makeText(this@ProfileActivity, "Foto actualizada", Toast.LENGTH_SHORT).show()
-
-                    } else {
-                        Toast.makeText(this@ProfileActivity, "Error al subir foto", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-            } catch (e: Exception) {
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-    override fun onResume() {
-        super.onResume()
-        cargarPerfilYTags()   // Recarga perfil y foto siempre que la pantalla se reconstruye
-    }
-
 }
-
-

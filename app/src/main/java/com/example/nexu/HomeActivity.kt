@@ -9,50 +9,70 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
     private lateinit var rvFeed: RecyclerView
-    private lateinit var currentEmail: String
+    private lateinit var postAdapter: PostAdapter
+    private lateinit var jwtToken: String
+    private lateinit var currentUserId: String
+
     private var listaGlobal: MutableList<Post> = mutableListOf()
+
+    private val api = RetrofitClient.api
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        val root = findViewById<View>(android.R.id.content)
-        ThemeManager.applyThemeBackground(this, root)
+        ThemeManager.applyThemeBackground(this, findViewById(android.R.id.content))
 
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
-        currentEmail = sharedPref.getString("currentUser", null) ?: ""
 
-        // Obtener token
-        val token = sharedPref.getString("token", null)
-        if (token != null) {
-            obtenerPerfilDesdeBackend(token)
+        jwtToken = sharedPref.getString("token", "") ?: ""
+        currentUserId = sharedPref.getString("user_id", "") ?: ""
+
+        if (jwtToken.isEmpty()) {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+            return
         }
 
-        // Navegación
-        findViewById<LinearLayout>(R.id.messagesection).setOnClickListener {
-            startActivity(Intent(this, MessagesActivity::class.java)); finish()
-        }
-        findViewById<LinearLayout>(R.id.profileSection).setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java)); finish()
-        }
+        // Navegación inferior
+        initBottomNav()
 
-        // PUBLICAR DESDE HOME
+        // RecyclerView
+        rvFeed = findViewById(R.id.rvFeed)
+        rvFeed.layoutManager = LinearLayoutManager(this)
+
+        postAdapter = PostAdapter(
+            this,
+            listaGlobal,
+            onDelete = { post -> confirmarYEliminar(post) },
+            onItemClick = { post ->
+                if (post.user.id != currentUserId) {
+                    startActivity(Intent(this, ChatActivity::class.java).apply {
+                        putExtra("emailOtro", post.user.name)
+                        putExtra("nombreOtro", post.user.name)
+                    })
+                } else {
+                    Toast.makeText(this, "Esta es tu publicación", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+
+        rvFeed.adapter = postAdapter
+
+        // Botón para publicar
         findViewById<EditText>(R.id.newPostInput).setOnClickListener {
             abrirDialogNuevaPublicacionHome()
         }
 
-        // BUSCADOR
+        // Buscador
         findViewById<EditText>(R.id.searchInput).addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -61,243 +81,153 @@ class HomeActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        // RECYCLER VIEW
-        rvFeed = findViewById(R.id.rvFeed)
-        rvFeed.layoutManager = LinearLayoutManager(this)
-
-        listaGlobal = obtenerPublicacionesGlobales().toMutableList()
-
-        rvFeed.adapter = PostAdapter(
-            context = this,
-            lista = listaGlobal,
-            onDelete = { post ->
-                eliminarPost(post)
-            },
-            onItemClick = { post ->
-                if (post.emailAutor != currentEmail) {
-                    startActivity(Intent(this, ChatActivity::class.java).apply {
-                        putExtra("emailOtro", post.emailAutor)
-                        putExtra("nombreOtro", post.nombre)
-                    })
-                } else {
-                    Toast.makeText(this, "Esta es tu publicación", Toast.LENGTH_SHORT).show()
-                }
-            }
-        )
+        cargarFeedGlobal()
     }
 
     // ============================================================
-    // OBTENER PERFIL DESDE BACKEND
+    // OBTENER FEED GLOBAL DESDE EL BACKEND
     // ============================================================
-    private fun obtenerPerfilDesdeBackend(token: String) {
-        lifecycleScope.launch(Dispatchers.IO) {
+    private fun cargarFeedGlobal() {
+        CoroutineScope(Dispatchers.Main).launch {
             try {
-                val response = RetrofitClient.api.getUserProfile("Bearer $token")
+                val response = api.getPosts("Bearer $jwtToken")
 
-                withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        val profile = response.body()?.data
-                        if (profile != null) {
-
-                            // Mostrar nombre real en "Bienvenid@"
-                            findViewById<TextView>(R.id.welcomeText).text =
-                                "Bienvenid@ ${profile.name}"
-
-                        }
-                    } else {
-                        findViewById<TextView>(R.id.welcomeText).text = "Bienvenid@"
-                    }
+                if (response.isSuccessful) {
+                    listaGlobal = response.body()?.data?.toMutableList() ?: mutableListOf()
+                    postAdapter.setPosts(listaGlobal)
+                } else {
+                    Toast.makeText(this@HomeActivity, "Error en servidor", Toast.LENGTH_SHORT).show()
                 }
 
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    findViewById<TextView>(R.id.welcomeText).text = "Bienvenid@"
-                }
+                Toast.makeText(this@HomeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
     // ============================================================
-    // ELIMINAR PUBLICACIÓN
-    // ============================================================
-    private fun eliminarPost(post: Post) {
-        val key = "${post.emailAutor}_posts"
-        val current = sharedPref.getStringSet(key, emptySet())!!.toMutableSet()
-
-        val record = "${post.nombre}|${post.carrera}|${post.tag}|${post.contenido}|${post.emailAutor}"
-        current.remove(record)
-
-        sharedPref.edit().putStringSet(key, current).apply()
-
-        listaGlobal = obtenerPublicacionesGlobales().toMutableList()
-        rvFeed.adapter = PostAdapter(
-            this,
-            listaGlobal,
-            onDelete = { eliminarPost(it) },
-            onItemClick = {
-                if (it.emailAutor != currentEmail) {
-                    startActivity(Intent(this, ChatActivity::class.java).apply {
-                        putExtra("emailOtro", it.emailAutor)
-                        putExtra("nombreOtro", it.nombre)
-                    })
-                }
-            }
-        )
-    }
-
-    // ============================================================
-    // OBTENER PUBLICACIONES
-    // ============================================================
-    private fun obtenerPublicacionesGlobales(): List<Post> {
-        val lista = mutableListOf<Post>()
-
-        for (key in sharedPref.all.keys) {
-            if (key.endsWith("_posts")) {
-                val emailAutorDeKey = key.removeSuffix("_posts")
-                val raw = sharedPref.getStringSet(key, emptySet()) ?: emptySet()
-
-                raw.forEach { s ->
-                    val parts = s.split("|")
-
-                    when (parts.size) {
-                        4 -> {
-                            lista.add(
-                                Post(
-                                    nombre = parts[0],
-                                    carrera = parts[1],
-                                    tag = parts[2],
-                                    contenido = parts[3],
-                                    emailAutor = emailAutorDeKey
-                                )
-                            )
-                        }
-                        5 -> {
-                            lista.add(
-                                Post(
-                                    nombre = parts[0],
-                                    carrera = parts[1],
-                                    tag = parts[2],
-                                    contenido = parts[3],
-                                    emailAutor = parts[4]
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        return lista
-    }
-
-    // ============================================================
-    // BUSCADOR
+    // FILTRO DE BUSQUEDA POR TAGS
     // ============================================================
     private fun filtrarBuscador(query: String) {
         if (query.isBlank()) {
-            rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
-                if (it.emailAutor != currentEmail) {
-                    startActivity(Intent(this, ChatActivity::class.java).apply {
-                        putExtra("emailOtro", it.emailAutor)
-                        putExtra("nombreOtro", it.nombre)
-                    })
-                }
-            })
+            postAdapter.setPosts(listaGlobal)
             return
         }
 
         val filtrados = listaGlobal.filter { post ->
-            post.tag.contains(query, ignoreCase = true) ||
-                    post.contenido.contains(query, ignoreCase = true)
+            post.tag.name.contains(query, ignoreCase = true) ||
+                    post.description.contains(query, ignoreCase = true)
         }
 
-        rvFeed.adapter = PostAdapter(
-            this,
-            filtrados,
-            onDelete = { eliminarPost(it) },
-            onItemClick = {
-                if (it.emailAutor != currentEmail) {
-                    startActivity(Intent(this, ChatActivity::class.java).apply {
-                        putExtra("emailOtro", it.emailAutor)
-                        putExtra("nombreOtro", it.nombre)
-                    })
-                }
-            }
-        )
+        postAdapter.setPosts(filtrados)
     }
 
     // ============================================================
-    // PUBLICAR DESDE HOME
+    // PUBLICAR DESDE HOME (CON TAGS REALES)
     // ============================================================
     private fun abrirDialogNuevaPublicacionHome() {
 
-        val dialog = AlertDialog.Builder(this).create()
-        val view = layoutInflater.inflate(R.layout.dialog_new_post, null)
+        val view = layoutInflater.inflate(R.layout.dialog_create_post, null)
+        val spinner = view.findViewById<Spinner>(R.id.spinnerTags)
+        val edtDesc = view.findViewById<EditText>(R.id.edtDescripcionPost)
 
-        val txtNombre = view.findViewById<TextView>(R.id.txtDialogNombre)
-        val txtCarrera = view.findViewById<TextView>(R.id.txtDialogCarrera)
-        val spinnerTags = view.findViewById<Spinner>(R.id.spinnerTags)
-        val edtText = view.findViewById<EditText>(R.id.edtPostText)
-        val btnPublicar = view.findViewById<Button>(R.id.btnPublicar)
+        CoroutineScope(Dispatchers.Main).launch {
 
-        val data = sharedPref.getString(currentEmail, "")!!.split("#")
+            try {
+                val response = api.getTags("Bearer $jwtToken")
 
-        val nombre = data[0]
-        val carrera = data[2]
-        val atributos = data.last()
-            .split(",")
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
+                if (response.isSuccessful) {
+                    val tags = response.body()?.data ?: emptyList()
+                    val nombres = tags.map { it.name }
 
-        txtNombre.text = nombre
-        txtCarrera.text = carrera
+                    val adapter = ArrayAdapter(
+                        this@HomeActivity,
+                        android.R.layout.simple_spinner_dropdown_item,
+                        nombres
+                    )
+                    spinner.adapter = adapter
 
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, atributos)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTags.adapter = adapter
+                    AlertDialog.Builder(this@HomeActivity)
+                        .setTitle("Nueva publicación")
+                        .setView(view)
+                        .setPositiveButton("Publicar") { _, _ ->
 
-        btnPublicar.setOnClickListener {
+                            val desc = edtDesc.text.toString().trim()
+                            if (desc.isBlank()) {
+                                Toast.makeText(this@HomeActivity, "Escribe algo", Toast.LENGTH_SHORT).show()
+                                return@setPositiveButton
+                            }
 
-            val tag = spinnerTags.selectedItem.toString()
-            val texto = edtText.text.toString().trim()
-
-            if (texto.isBlank()) {
-                Toast.makeText(this, "Escribe algo para publicar", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            guardarPublicacion(nombre, carrera, tag, texto)
-            dialog.dismiss()
-
-            listaGlobal = obtenerPublicacionesGlobales().toMutableList()
-            rvFeed.adapter = PostAdapter(this, listaGlobal, onDelete = { eliminarPost(it) }, onItemClick = {
-                if (it.emailAutor != currentEmail) {
-                    startActivity(Intent(this, ChatActivity::class.java).apply {
-                        putExtra("emailOtro", it.emailAutor)
-                        putExtra("nombreOtro", it.nombre)
-                    })
+                            val tagSeleccionado = tags[spinner.selectedItemPosition]
+                            crearPost(tagSeleccionado.id, desc)
+                        }
+                        .setNegativeButton("Cancelar", null)
+                        .show()
                 }
-            })
+
+            } catch (e: Exception) {
+                Toast.makeText(this@HomeActivity, "Error cargando tags", Toast.LENGTH_LONG).show()
+            }
         }
-
-        dialog.setView(view)
-        dialog.show()
     }
 
     // ============================================================
-    // GUARDAR PUBLICACIÓN
+    // CREAR POST (BACKEND)
     // ============================================================
-    private fun guardarPublicacion(nombre: String, carrera: String, tag: String, texto: String) {
+    private fun crearPost(tagId: String, desc: String) {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val response = api.createPost("Bearer $jwtToken", CreatePostRequest(tagId, desc))
 
-        val post = "$nombre|$carrera|$tag|$texto|$currentEmail"
-        val key = "${currentEmail}_posts"
+                if (response.isSuccessful) {
+                    cargarFeedGlobal()
+                }
 
-        val current = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
-        current.add(post)
-
-        sharedPref.edit().putStringSet(key, current).apply()
-
-        Toast.makeText(this, "Publicado", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this@HomeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
+    // ============================================================
+    // ELIMINAR POST DESDE HOME
+    // ============================================================
+    private fun confirmarYEliminar(post: Post) {
+        AlertDialog.Builder(this)
+            .setTitle("Eliminar publicación")
+            .setMessage("¿Seguro que quieres eliminar esta publicación?")
+            .setPositiveButton("Eliminar") { _, _ ->
+                eliminarPost(post)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun eliminarPost(post: Post) {
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val response = api.deletePost("Bearer $jwtToken", post.id)
+
+                if (response.isSuccessful) {
+                    listaGlobal.remove(post)
+                    postAdapter.removePostById(post.id)
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(this@HomeActivity, "Error eliminando", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ============================================================
+    // NAVEGACIÓN INFERIOR
+    // ============================================================
+    private fun initBottomNav() {
+        findViewById<LinearLayout>(R.id.messagesection).setOnClickListener {
+            startActivity(Intent(this, MessagesActivity::class.java)); finish()
+        }
+        findViewById<LinearLayout>(R.id.profileSection).setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java)); finish()
+        }
+    }
 }

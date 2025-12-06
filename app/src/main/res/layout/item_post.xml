@@ -1,73 +1,86 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/cardPost"
-    android:orientation="vertical"
-    android:padding="16dp"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_dialog"
-    android:layout_marginBottom="12dp"
-    android:clickable="true"
-    android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground">
+    android:layout_margin="10dp"
+    android:padding="12dp"
+    android:elevation="6dp"
+    android:id="@+id/cardPost">
 
-
-<!-- FILA SUPERIOR: Nombre + menú -->
     <LinearLayout
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical">
+        android:layout_height="wrap_content">
 
+        <!-- Usuario -->
         <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="0dp"
-            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <TextView
-                android:id="@+id/txtItemNombre"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textColor="@color/black"
-                android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/imgAvatar"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:src="@drawable/ic_profile"
+                android:scaleType="centerCrop"
+                android:background="@drawable/rounded_image"
+                android:padding="2dp" />
 
-            <TextView
-                android:id="@+id/txtItemCarrera"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:textColor="@color/black"
-                android:textSize="14sp" />
+                android:layout_weight="1"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:id="@+id/txtItemNombre"
+                    android:text="Usuario"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textColor="@color/black"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/txtItemCarrera"
+                    android:text="ISC"
+                    android:textSize="14sp"
+                    android:textColor="#777"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnItemMenu"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:src="@drawable/ic_more_vert"/>
         </LinearLayout>
 
-        <!-- 🔥 MENÚ DE EDITAR Y ELIMINAR -->
-        <ImageView
-            android:id="@+id/btnItemMenu"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_more_vert"
-            android:padding="4dp" />
+        <!-- Contenido -->
+        <TextView
+            android:id="@+id/txtItemContenido"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Contenido del post"
+            android:layout_marginTop="12dp"
+            android:textSize="15sp"
+            android:textColor="@color/black"/>
+
+        <!-- Tag -->
+        <TextView
+            android:id="@+id/txtItemTag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="#AmanteAnimales"
+            android:textStyle="bold"
+            android:textColor="@color/textPrimaryBlue"
+            android:textSize="14sp"/>
 
     </LinearLayout>
 
-    <!-- TAG -->
-    <TextView
-        android:id="@+id/txtItemTag"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textStyle="italic"
-        android:textColor="@color/black"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="4dp"/>
-
-    <!-- CONTENIDO -->
-    <TextView
-        android:id="@+id/txtItemContenido"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/black"
-        android:textSize="15sp"
-        android:layout_marginTop="4dp" />
-
-</LinearLayout>
+</androidx.cardview.widget.CardView>
