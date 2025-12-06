@@ -65,4 +65,7 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.logging)
 
+    implementation("com.github.bumptech.glide:glide:4.15.1")
+
+
 }

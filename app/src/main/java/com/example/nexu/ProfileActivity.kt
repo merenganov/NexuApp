@@ -11,6 +11,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -166,7 +167,15 @@ class ProfileActivity : AppCompatActivity() {
 
         val atributosTxt = profile.tags?.joinToString(", ") ?: ""
         findViewById<TextView>(R.id.txtAtributos).text = atributosTxt
-        
+        val imgPerfil = findViewById<ImageView>(R.id.imgPerfil)
+
+        if (!profile.avatar_url.isNullOrBlank()) {
+            Glide.with(this)
+                .load(profile.avatar_url)
+                .placeholder(R.drawable.ic_profile)
+                .into(imgPerfil)
+        }
+
 
         // Mensaje de perfil incompleto
         val incompleto = (
@@ -376,7 +385,8 @@ class ProfileActivity : AppCompatActivity() {
             try {
                 val bytes = contentResolver.openInputStream(uri)?.readBytes() ?: return@launch
 
-                val reqFile: RequestBody = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+                val reqFile: RequestBody =
+                    bytes.toRequestBody("image/*".toMediaTypeOrNull())
 
                 val body = MultipartBody.Part.createFormData(
                     "avatar",
@@ -388,9 +398,21 @@ class ProfileActivity : AppCompatActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (res.isSuccessful) {
+
                         currentUserProfile = res.body()?.data
-                        mostrarPerfilEnUI(currentUserProfile!!)
+
+                        val nuevaFoto = currentUserProfile?.avatar_url
+
+                        // 🟢 SE ACTUALIZA EN PANTALLA INMEDIATAMENTE
+                        if (!nuevaFoto.isNullOrBlank()) {
+                            Glide.with(this@ProfileActivity)
+                                .load(nuevaFoto)
+                                .placeholder(R.drawable.ic_profile)
+                                .into(findViewById(R.id.imgPerfil))
+                        }
+
                         Toast.makeText(this@ProfileActivity, "Foto actualizada", Toast.LENGTH_SHORT).show()
+
                     } else {
                         Toast.makeText(this@ProfileActivity, "Error al subir foto", Toast.LENGTH_SHORT).show()
                     }
@@ -404,4 +426,11 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
     }
+    override fun onResume() {
+        super.onResume()
+        cargarPerfilYTags()   // Recarga perfil y foto siempre que la pantalla se reconstruye
+    }
+
 }
+
+
