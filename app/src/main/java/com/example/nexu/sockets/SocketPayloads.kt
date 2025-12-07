@@ -11,5 +11,6 @@ data class NewNotificationPayload(
     val sender_id: String,
     val sender_name: String,
     val message: String,
-    val message_id: String
+    val message_id: String,
+    val timestamp: String
 )

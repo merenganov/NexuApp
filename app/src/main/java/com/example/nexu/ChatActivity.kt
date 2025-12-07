@@ -66,8 +66,7 @@ class ChatActivity : AppCompatActivity() {
 
         // Cargar mensajes previos si los hay
         cargarMensajes(jwt, chat_id)
-        // Cargar Eventos de sockets
-        observeSocketsEvents()
+
 
         // Botón enviar
         findViewById<ImageButton>(R.id.btnEnviar).setOnClickListener {
@@ -77,7 +76,8 @@ class ChatActivity : AppCompatActivity() {
             startActivity(Intent(this, MessagesActivity::class.java))
             finish()
         }
-
+        // Cargar Eventos de sockets
+        observeSocketsEvents()
     }
 
     // RECEPCION DE EVENTOS DE SOCKETS
@@ -91,11 +91,19 @@ class ChatActivity : AppCompatActivity() {
                     event.toNewNotification()?.let { notificationPayload ->
                         Log.i("SOCKET", "Mensaje de: ${notificationPayload.sender_name}")
                         Log.i("SOCKET", "Mensaje: ${notificationPayload.message}")
+                        Log.i("SOCKET", "Timestamp: ${notificationPayload.timestamp}")
+                        val new_msg = Mensaje(
+                            notificationPayload.message,
+                            notificationPayload.sender_id,
+                            "",
+                            parseTimeStamp(notificationPayload.timestamp)
+                        )
+                        with(Dispatchers.Main){
+                            listaMensajes.add(new_msg)
+                            actualizarRecycler()
+                        }
                     }
-//                    Parsear el json a datos
-//                    Crear el objeto mensaje
-//                    Guardarlo en la lista
-//                    Llamar a actualizar recycler
+
                 }
             }
         }
@@ -197,10 +205,10 @@ class ChatActivity : AppCompatActivity() {
                         }
 
                         // Data es una List<Message>
-                        val mensajes = data.map{ messageApi ->
-                            parseMessageApiToMensaje(messageApi)
-                        }.sortedByDescending { it.timestamp }
-                        listaMensajes = mensajes as MutableList<Mensaje>
+                        data.forEach {
+                            val msgUi = parseMessageApiToMensaje(it)
+                            listaMensajes.add(msgUi)
+                        }
                         actualizarRecycler()
                     },
                     onFailure = {
