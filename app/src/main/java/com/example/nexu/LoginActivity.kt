@@ -20,21 +20,17 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        // === Referencias a los elementos del layout ===
         val signinButton: Button = findViewById(R.id.signinButton)
         val loginButton: Button = findViewById(R.id.loginButton)
         val emailInput: EditText = findViewById(R.id.emailInput)
         val passwordInput: EditText = findViewById(R.id.passwordInput)
 
-        // SharedPreferences para guardar token y usuario
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
 
-        // === BOTÓN PARA IR A CREAR CUENTA ===
         signinButton.setOnClickListener {
             startActivity(Intent(this, CreateAccountActivity::class.java))
         }
 
-        // === BOTÓN LOGIN QUE AHORA LLAMA AL BACKEND ===
         loginButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString().trim()
@@ -44,74 +40,95 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Hacemos login real hacia el backend
             hacerLogin(email, password)
         }
     }
 
     // ================================================================
-    // FUNCIÓN QUE SE CONECTA AL BACKEND PARA VALIDAR LOGIN
+    // LOGIN REAL
     // ================================================================
     private fun hacerLogin(email: String, password: String) {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val request = LoginRequest(email, password)
-
-                // Petición al backend
                 val response = RetrofitClient.api.login(request)
 
-                withContext(Dispatchers.Main) {
+                if (response.isSuccessful) {
 
-                    if (response.isSuccessful) {
-                        val data = response.body()?.data
+                    val loginData = response.body()?.data
+                    val token = loginData?.accessToken
 
-                        if (data != null) {
-
-                            val token = data.accessToken
-
-                            // Guardamos token y usuario actual en SharedPreferences
-                            sharedPref.edit()
-                                .putString("token", token)
-                                .putString("currentUser", email)
-                                .apply()
-
-                            Toast.makeText(
-                                this@LoginActivity,
-                                "Inicio de sesión exitoso",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            // Ir a HomeActivity
-                            val homeIntent = Intent(this@LoginActivity, HomeActivity::class.java)
-                            homeIntent.putExtra("email", email)
-                            startActivity(homeIntent)
-                            finish()
-
-                        } else {
-                            Toast.makeText(
-                                this@LoginActivity,
-                                "Error al procesar los datos",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                    if (token == null) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@LoginActivity, "Token inválido", Toast.LENGTH_SHORT).show()
                         }
+                        return@launch
+                    }
 
-                    } else {
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "Credenciales incorrectas",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    // Guardamos token temporalmente
+                    sharedPref.edit()
+                        .putString("token", token)
+                        .apply()
+
+                    // 🔥 AHORA OBLIGATORIAMENTE obtenemos el perfil real
+                    obtenerPerfilDespuesDeLogin(token, email)
+
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@LoginActivity, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
                     }
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@LoginActivity,
-                        "Error al conectar con el servidor: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(this@LoginActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // ================================================================
+    // OBTENER PERFIL REAL (AQUÍ LLEGA EL user.id)
+    // ================================================================
+    private fun obtenerPerfilDespuesDeLogin(token: String, email: String) {
+
+        lifecycleScope.launch(Dispatchers.IO) {
+
+            try {
+                val res = RetrofitClient.api.getUserProfile("Bearer $token")
+
+                if (res.isSuccessful) {
+                    val profile = res.body()?.data
+
+                    if (profile != null) {
+
+                        // 🔥 Guardamos el ID real del usuario
+                        sharedPref.edit()
+                            .putString("user_id", profile.id)
+                            .putString("currentUser", email)
+                            .apply()
+
+                        withContext(Dispatchers.Main) {
+
+                            Toast.makeText(this@LoginActivity, "Inicio de sesión exitoso", Toast.LENGTH_SHORT).show()
+
+                            // Ir al Home
+                            val intent = Intent(this@LoginActivity, HomeActivity::class.java)
+                            startActivity(intent)
+                            finish()
+                        }
+                    }
+
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@LoginActivity, "No se pudo obtener el perfil", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@LoginActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
