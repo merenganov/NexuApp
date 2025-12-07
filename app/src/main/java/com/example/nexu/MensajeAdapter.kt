@@ -1,14 +1,16 @@
 package com.example.nexu
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import kotlin.math.log
 
 class MensajeAdapter(
     private val lista: List<Mensaje>,
-    private val emailActual: String
+    private val user_id_actual: String
 ) : RecyclerView.Adapter<MensajeAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -27,7 +29,10 @@ class MensajeAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        return if (lista[position].autor == emailActual) 1 else 0
+        val autor = lista[position].autor
+        Log.i("CHAT_DEBUG", "User_id: $user_id_actual")
+        Log.i("CHAT_DEBUG", "Autor: $autor")
+        return if (autor == user_id_actual) 1 else 0
     }
 
     override fun getItemCount(): Int = lista.size

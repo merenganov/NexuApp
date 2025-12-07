@@ -69,11 +69,13 @@ class LoginActivity : AppCompatActivity() {
                         if (data != null) {
 
                             val token = data.accessToken
+                            val userId = data.userId
 
                             // Guardamos token y usuario actual en SharedPreferences
                             sharedPref.edit()
                                 .putString("token", token)
                                 .putString("currentUser", email)
+                                .putString("currentUserId", userId)
                                 .apply()
 
                             Toast.makeText(

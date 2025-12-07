@@ -50,7 +50,7 @@ class ProfileActivity : AppCompatActivity() {
         api = RetrofitClient.api
 
         jwtToken = sharedPref.getString("token", "") ?: ""
-        currentUserId = sharedPref.getString("user_id", "") ?: ""
+        currentUserId = sharedPref.getString("currentUserId", "") ?: ""
 
         if (jwtToken.isEmpty()) {
             startActivity(Intent(this, LoginActivity::class.java))

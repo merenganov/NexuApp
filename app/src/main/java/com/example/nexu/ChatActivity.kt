@@ -7,18 +7,30 @@ import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class ChatActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
     private lateinit var emailActual: String
+//    TODO: quitar emailOtro, no se va a usar
     private lateinit var emailOtro: String
 
+    private lateinit var chat_id: String
+    private lateinit var current_user_id: String
+
     private lateinit var recyclerMensajes: RecyclerView
-    private val listaMensajes = mutableListOf<Mensaje>()
+    private var listaMensajes = mutableListOf<Mensaje>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,7 +44,12 @@ class ChatActivity : AppCompatActivity() {
         // Usuario actual
         emailActual = sharedPref.getString("currentUser", "") ?: ""
 
-        // Datos del usuario con quien hablamos
+        current_user_id = sharedPref.getString("currentUserId", "") ?: ""
+
+        val jwt = sharedPref.getString("token", "") ?: ""
+
+        // Datos del Chat
+        chat_id  = intent.getStringExtra("chat_id") ?: ""
         emailOtro = intent.getStringExtra("emailOtro") ?: ""    // ESTO ES DONDE VA A ROMPER RN
         val nombreOtro = intent.getStringExtra("nombreOtro") ?: ""
 
@@ -44,7 +61,7 @@ class ChatActivity : AppCompatActivity() {
         recyclerMensajes.layoutManager = LinearLayoutManager(this)
 
         // Cargar mensajes previos si los hay
-        cargarMensajes()
+        cargarMensajes(jwt, chat_id)
 
         // Botón enviar
         findViewById<ImageButton>(R.id.btnEnviar).setOnClickListener {
@@ -132,6 +149,63 @@ class ChatActivity : AppCompatActivity() {
         actualizarRecycler()
     }
 
+    private fun cargarMensajes(jwt:String, chat_id: String){
+        lifecycleScope.launch(Dispatchers.IO){
+            val result = runCatching {
+                RetrofitClient.api.getMessages("Bearer $jwt",chat_id)
+            }
+
+            withContext(Dispatchers.Main){
+                result.fold(
+                    onSuccess =  { response ->
+                        if (!response.isSuccessful){
+                            mostrarError("Error al mandar la peticion")
+                            return@fold
+                        }
+
+                        val data = response.body()?.data
+                        if (data == null){
+                            mostrarError("Error al procesar los datos")
+                            return@fold
+                        }
+
+                        // Data es una List<Message>
+                        val mensajes = data.map{ messageApi ->
+                            parseMessageApiToMensaje(messageApi)
+                        }.sortedByDescending { it.timestamp }
+                        listaMensajes = mensajes as MutableList<Mensaje>
+                        actualizarRecycler()
+                    },
+                    onFailure = {
+                        mostrarError("Error de conexion")
+                    }
+                )
+            }
+        }
+    }
+
+    private fun mostrarError(msg: String) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun parseMessageApiToMensaje(msg: MessageApi): Mensaje{
+        return Mensaje(
+            texto = msg.content,
+            autor = msg.senderId,
+            receptor = "",
+            timestamp = parseTimeStamp(msg.timestamp)
+        )
+    }
+
+    // TODO: no se maneja timezone en ningun lado de la app
+    private fun parseTimeStamp(timestamp: String?): Long {
+        if (timestamp == null) return  0L
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+
+        return sdf.parse(timestamp)?.time ?: 0L
+    }
+
     // ============================================================
     // GUARDAR MENSAJES
     // ============================================================
@@ -149,7 +223,7 @@ class ChatActivity : AppCompatActivity() {
     // ACTUALIZAR RECYCLER
     // ============================================================
     private fun actualizarRecycler() {
-        recyclerMensajes.adapter = MensajeAdapter(listaMensajes, emailActual)
+        recyclerMensajes.adapter = MensajeAdapter(listaMensajes, current_user_id)
         recyclerMensajes.scrollToPosition(listaMensajes.size - 1)
     }
 }

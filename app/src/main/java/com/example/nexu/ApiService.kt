@@ -26,7 +26,8 @@ data class LoginRequest(
 
 data class LoginData(
     @SerializedName("access_token") val accessToken: String,
-    @SerializedName("token_type") val tokenType: String
+    @SerializedName("token_type") val tokenType: String,
+    @SerializedName("user_id") val userId:String
 )
 
 data class LoginResponse(
@@ -56,7 +57,7 @@ data class ChatsResponse(
     val data: List<ChatSummary>
 )
 
-data class Message(
+data class MessageApi(
     val id: String,
     @SerializedName("sender_id") val senderId: String,
     val content: String,
@@ -66,7 +67,7 @@ data class Message(
 )
 
 data class MessagesResponse(
-    val data: List<Message>
+    val data: List<MessageApi>
 )
 data class SignupRequest(
     val name: String,
