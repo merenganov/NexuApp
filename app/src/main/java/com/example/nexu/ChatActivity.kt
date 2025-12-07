@@ -92,16 +92,15 @@ class ChatActivity : AppCompatActivity() {
 
     // RECEPCION DE EVENTOS DE SOCKETS
     private fun observeSocketsEvents(){
-        Log.i("SOCKET", "Setteando listeners de sockets")
         lifecycleScope.launch {
             repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 SocketEventBus.events.collect { event ->
-                    Log.i("SOCKET", "Llego el siguiente evento: ${event.name}")
-                    Log.i("SOCKET", "Con la siguiente data: ${event.data}")
+                    Log.d("SOCKET", "Llego el siguiente evento: ${event.name}")
+                    Log.d("SOCKET", "Con la siguiente data: ${event.data}")
                     event.toNewNotification()?.let { notificationPayload ->
-                        Log.i("SOCKET", "Mensaje de: ${notificationPayload.sender_name}")
-                        Log.i("SOCKET", "Mensaje: ${notificationPayload.message}")
-                        Log.i("SOCKET", "Timestamp: ${notificationPayload.timestamp}")
+                        Log.d("SOCKET", "Mensaje de: ${notificationPayload.sender_name}")
+                        Log.d("SOCKET", "Mensaje: ${notificationPayload.message}")
+                        Log.d("SOCKET", "Timestamp: ${notificationPayload.timestamp}")
                         val new_msg = Mensaje(
                             notificationPayload.message,
                             notificationPayload.sender_id,
@@ -158,7 +157,12 @@ class ChatActivity : AppCompatActivity() {
     private fun cargarMensajes(jwt:String, chat_id: String){
         lifecycleScope.launch(Dispatchers.IO){
             val result = runCatching {
-                RetrofitClient.api.getMessages("Bearer $jwt",chat_id)
+                if(!isFirst){
+                    RetrofitClient.api.getMessages("Bearer $jwt",chat_id)
+                } else{
+                    RetrofitClient.api.getMessagesFromUser("Bearer $jwt", other_id)
+                }
+
             }
 
             withContext(Dispatchers.Main){
@@ -174,11 +178,14 @@ class ChatActivity : AppCompatActivity() {
                             mostrarError("Error al procesar los datos")
                             return@fold
                         }
+                        Log.d("MENSAJES", "Data mensajes: $data")
 
                         // Data es una List<Message>
                         data.forEach {
                             val msgUi = parseMessageApiToMensaje(it)
-                            listaMensajes.add(msgUi)
+                            if (msgUi != null){
+                                listaMensajes.add(msgUi)
+                            }
                         }
                         actualizarRecycler()
                     },
@@ -194,7 +201,11 @@ class ChatActivity : AppCompatActivity() {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    private fun parseMessageApiToMensaje(msg: MessageApi): Mensaje{
+    private fun parseMessageApiToMensaje(msg: MessageApi): Mensaje? {
+        // Si no hay contenido, considerar como "mensaje vacío" → se ignora
+        if (msg.content.isNullOrBlank()) return null
+        if (msg.senderId.isNullOrBlank()) return null
+        if (msg.timestamp == null) return null
         return Mensaje(
             texto = msg.content,
             autor = msg.senderId,

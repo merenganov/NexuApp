@@ -62,8 +62,11 @@ class HomeActivity : AppCompatActivity() {
             onDelete = { post -> confirmarYEliminar(post) },
             onItemClick = { post ->
                 if (post.user.id != currentUserId) {
+//                    Revisar si no se tenia ya chat con esa persona
+
                     startActivity(Intent(this, ChatActivity::class.java).apply {
-                        putExtra("emailOtro", post.user.name)
+                        putExtra("other_id", post.user.id)
+                        putExtra("ifFirst", true)
                         putExtra("nombreOtro", post.user.name)
                     })
                 } else {

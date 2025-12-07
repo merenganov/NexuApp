@@ -3,13 +3,17 @@ package com.example.nexu
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.nexu.sockets.SocketEventBus
+import com.example.nexu.sockets.toNewNotification
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,8 +67,36 @@ class MessagesActivity : AppCompatActivity() {
             startActivity(Intent(this, ProfileActivity::class.java))
             finish()
         }
+
+        observeSocketsEvents()
     }
 
+//    Subscripcion a eventos de sockets
+    private fun observeSocketsEvents(){
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                SocketEventBus.events.collect { event ->
+
+                    event.toNewNotification()?.let { notificationPayload ->
+//                        Solo nos interesa el chat id aqiu
+                        val chat_id = notificationPayload.chat_id
+                        with(Dispatchers.Main){
+                            listaChatsOriginal.forEach {
+                                if (it.id == chat_id){
+                                    Log.d(
+                                        "SOCKET",
+                                        "Nuevo mensaje del chat con ${notificationPayload.sender_name}")
+                                    it.ultimoMensaje = notificationPayload.message
+                                }
+                            }
+                            configurarAdapter(listaChatsOriginal)
+                        }
+                    }
+
+                }
+            }
+        }
+    }
 
     private fun cargarChats(jwt: String) {
         lifecycleScope.launch(Dispatchers.IO) {
@@ -109,7 +141,8 @@ class MessagesActivity : AppCompatActivity() {
             nombre = c.otherUser.name,
             id = c.id,
             ultimoMensaje = c.lastMessage?.content.orEmpty(),
-            timestamp = parseTimeStamp(c.lastMessage?.timestamp)
+            timestamp = parseTimeStamp(c.lastMessage?.timestamp),
+            fotoPerfilUrl = c.otherUser.avatarUrl ?:""
         )
     }
 
@@ -132,6 +165,7 @@ class MessagesActivity : AppCompatActivity() {
             onClick = { chat ->
                 val intent = Intent(this, ChatActivity::class.java)
                 intent.putExtra("chat_id", chat.id)
+                intent.putExtra("ifFirst", false)
                 intent.putExtra("nombreOtro", chat.nombre)
                 startActivity(intent)
             },
@@ -140,7 +174,7 @@ class MessagesActivity : AppCompatActivity() {
         rvChats.adapter = adapter
     }
 
-    // 🔥 FILTRO INTELIGENTE
+
     private fun filtrarChats(query: String) {
         if (query.isBlank()) {
             adapter.updateList(listaChatsOriginal)

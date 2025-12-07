@@ -129,6 +129,13 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("chatId") chatId: String
     ): Response<MessagesResponse>
+
+    @GET("chats/user/{userId}")
+    suspend fun getMessagesFromUser(
+        @Header("Authorization") token: String,
+        @Path("userId") userId: String
+    ): Response<MessagesResponse>
+
     @POST("users/signup")
     suspend fun signup(@Body request: SignupRequest): Response<SignupResponse>
 
@@ -175,11 +182,6 @@ interface ApiService {
         @Header("Authorization") auth: String,
         @Path("id") postId: String
     ): Response<DeletePostResponse>
-
-
-
-
-
 
 }
 

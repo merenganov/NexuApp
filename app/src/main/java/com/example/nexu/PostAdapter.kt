@@ -30,10 +30,10 @@ class PostAdapter(
 
         fun bind(post: Post) {
 
-            txtNombre.text = post.user.name          // <-- CORRECTO
-            txtCarrera.text = post.user.career       // <-- CORRECTO
-            txtTag.text = "#${post.tag.name}"        // <-- CORRECTO
-            txtContenido.text = post.description     // <-- CORRECTO
+            txtNombre.text = post.user.name
+            txtCarrera.text = post.user.career
+            txtTag.text = "#${post.tag.name}"
+            txtContenido.text = post.description
 
             Glide.with(context)
                 .load(post.user.avatar_url)
