@@ -63,4 +63,20 @@
         android:backgroundTint="#13ce83"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="32dp" />
+
+    <Button
+        android:id="@+id/btnGoogle"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginTop="16dp"
+        android:text="Sign Up with Google"
+        android:textColor="@color/black"
+        android:textAllCaps="false"
+        android:textSize="16sp"
+        android:background="@drawable/google_button_bg"
+        android:drawableLeft="@drawable/ic_google"
+        android:gravity="center_vertical"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"/>
+
 </LinearLayout>

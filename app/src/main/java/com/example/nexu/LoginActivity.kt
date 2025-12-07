@@ -46,6 +46,12 @@ class LoginActivity : AppCompatActivity() {
 
             hacerLogin(email, password)
         }
+        val btnGoogle = findViewById<Button>(R.id.btnGoogle)
+
+        btnGoogle.setOnClickListener {
+            Toast.makeText(this, "Próximamente: Login con Google", Toast.LENGTH_SHORT).show()
+        }
+
     }
 
     // ================================================================
