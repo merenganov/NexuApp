@@ -140,25 +140,6 @@ class MessagesActivity : AppCompatActivity() {
         rvChats.adapter = adapter
     }
 
-// DEPRECATED: no se pueden eliminar conversaciones
-    private fun eliminarConversacion(emailOtro: String) {
-        val key1 = "chat_${emailActual}_${emailOtro}"
-        val key2 = "chat_${emailOtro}_${emailActual}"
-        val listaKey = "${emailActual}_chatlist"
-        val infoKey = "chatinfo_${emailActual}_$emailOtro"
-
-        sharedPref.edit()
-            .remove(key1)
-            .remove(key2)
-            .remove(infoKey)
-            .apply()
-
-        val set = sharedPref.getStringSet(listaKey, mutableSetOf())!!.toMutableSet()
-        set.remove(emailOtro)
-        sharedPref.edit().putStringSet(listaKey, set).apply()
-    }
-
-
     // 🔥 FILTRO INTELIGENTE
     private fun filtrarChats(query: String) {
         if (query.isBlank()) {

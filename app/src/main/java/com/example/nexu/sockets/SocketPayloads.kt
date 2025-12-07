@@ -14,3 +14,9 @@ data class NewNotificationPayload(
     val message_id: String,
     val timestamp: String
 )
+
+/** Payload para mandar el evento dm */
+data class SendMessagePayload(
+    val target_id: String,
+    val content: String
+)

@@ -2,6 +2,7 @@ package com.example.nexu.sockets
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import org.json.JSONObject
 
 val gson = Gson()
 
@@ -24,4 +25,11 @@ inline fun <reified T> SocketEvent.parsePayload(): T? {
 fun SocketEvent.toNewNotification(): NewNotificationPayload? {
     if (this.name != "new_notification") return null
     return this.parsePayload<NewNotificationPayload>()
+}
+
+fun SendMessagePayload.toJson(): JSONObject {
+    return JSONObject().apply {
+        put("target_id", target_id)
+        put("content", content)
+    }
 }

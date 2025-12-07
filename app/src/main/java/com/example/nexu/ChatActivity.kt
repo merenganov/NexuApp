@@ -14,7 +14,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.nexu.sockets.SendMessagePayload
 import com.example.nexu.sockets.SocketEventBus
+import com.example.nexu.sockets.SocketManager
+import com.example.nexu.sockets.toJson
 import com.example.nexu.sockets.toNewNotification
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -120,67 +123,21 @@ class ChatActivity : AppCompatActivity() {
 
         val mensaje = Mensaje(
             texto = texto,
-            autor = emailActual,
+            autor = current_user_id,
             receptor = emailOtro,
             timestamp = System.currentTimeMillis()
         )
 
         listaMensajes.add(mensaje)
-        guardarMensajes()
-        guardarChatEnLista(emailOtro, texto)
 
+        val payload = SendMessagePayload(
+            target_id = chat_id,
+            content = texto
+        ).toJson()
+
+        SocketManager.emit("dm", payload)
 
         edtMensaje.setText("")
-        actualizarRecycler()
-    }
-    private fun guardarChatEnLista(emailOtro: String, ultimoMensaje: String) {
-        val key = "${emailActual}_chatlist"
-
-        // Recuperar la lista existente
-        val lista = sharedPref.getStringSet(key, mutableSetOf())!!.toMutableSet()
-
-        // Guardar email en la lista
-        lista.add(emailOtro)
-        sharedPref.edit().putStringSet(key, lista).apply()
-
-        // Guardar también último mensaje y timestamp del chat
-        val chatInfoKey = "chatinfo_${emailActual}_$emailOtro"
-        val timestamp = System.currentTimeMillis()
-
-        val nombreOtro = sharedPref.getString(emailOtro, "")?.split("#")?.getOrNull(0) ?: emailOtro
-
-        val chatData = "$nombreOtro|$ultimoMensaje|$timestamp"
-
-        sharedPref.edit().putString(chatInfoKey, chatData).apply()
-    }
-
-
-    // ============================================================
-    // CARGAR HISTORIAL DEL CHAT
-    // ============================================================
-    private fun cargarMensajes() {
-        val key1 = "chat_${emailActual}_${emailOtro}"
-        val key2 = "chat_${emailOtro}_${emailActual}"
-
-        // Busca mensajes en cualquiera de las dos combinaciones
-        val raw = sharedPref.getStringSet(key1, null)
-            ?: sharedPref.getStringSet(key2, emptySet())!!
-
-        raw.forEach {
-            val parts = it.split("|")
-            if (parts.size == 4) {
-                listaMensajes.add(
-                    Mensaje(
-                        texto = parts[0],
-                        autor = parts[1],
-                        receptor = parts[2],
-                        timestamp = parts[3].toLong()
-                    )
-                )
-            }
-        }
-
-        listaMensajes.sortBy { it.timestamp }
         actualizarRecycler()
     }
 
@@ -241,18 +198,6 @@ class ChatActivity : AppCompatActivity() {
         return sdf.parse(timestamp)?.time ?: 0L
     }
 
-    // ============================================================
-    // GUARDAR MENSAJES
-    // ============================================================
-    private fun guardarMensajes() {
-        val key = "chat_${emailActual}_${emailOtro}"
-
-        val set = listaMensajes.map {
-            "${it.texto}|${it.autor}|${it.receptor}|${it.timestamp}"
-        }.toSet()
-
-        sharedPref.edit().putStringSet(key, set).apply()
-    }
 
     // ============================================================
     // ACTUALIZAR RECYCLER
