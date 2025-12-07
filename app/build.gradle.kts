@@ -66,6 +66,6 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     implementation("com.github.bumptech.glide:glide:4.15.1")
-
+    implementation("io.socket:socket.io-client:2.0.1")
 
 }

@@ -33,7 +33,7 @@ class ChatActivity : AppCompatActivity() {
         emailActual = sharedPref.getString("currentUser", "") ?: ""
 
         // Datos del usuario con quien hablamos
-        emailOtro = intent.getStringExtra("emailOtro") ?: ""
+        emailOtro = intent.getStringExtra("emailOtro") ?: ""    // ESTO ES DONDE VA A ROMPER RN
         val nombreOtro = intent.getStringExtra("nombreOtro") ?: ""
 
         // Mostrar nombre arriba

@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 class ChatAdapter(
     private var lista: List<ChatPreview>,
     private val onClick: (ChatPreview) -> Unit,
-    private val onLongClick: (ChatPreview) -> Unit
+
 ) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -24,11 +24,6 @@ class ChatAdapter(
                 else chat.ultimoMensaje
 
             itemView.setOnClickListener { onClick(chat) }
-
-            itemView.setOnLongClickListener {
-                onLongClick(chat)
-                true
-            }
         }
     }
 

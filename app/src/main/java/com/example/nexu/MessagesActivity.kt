@@ -7,8 +7,15 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class MessagesActivity : AppCompatActivity() {
 
@@ -28,11 +35,13 @@ class MessagesActivity : AppCompatActivity() {
 
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
         emailActual = sharedPref.getString("currentUser", "") ?: ""
+        val jwt = sharedPref.getString("token", "") ?: ""
+
 
         rvChats = findViewById(R.id.rvChats)
         rvChats.layoutManager = LinearLayoutManager(this)
 
-        cargarListaChats()
+        cargarChats(jwt)
 
         // ============= BUSCADOR =============
         val edtSearch = findViewById<android.widget.EditText>(R.id.edtSearch)
@@ -56,62 +65,82 @@ class MessagesActivity : AppCompatActivity() {
         }
     }
 
-    private fun cargarListaChats() {
 
-        val listaKey = "${emailActual}_chatlist"
-        val correos = sharedPref.getStringSet(listaKey, emptySet())!!.toList()
-
-        val listaChats = mutableListOf<ChatPreview>()
-
-        correos.forEach { correoOtro ->
-
-            val datos = sharedPref.getString(correoOtro, "")?.split("#") ?: listOf("Usuario")
-            val nombre = datos.getOrNull(0) ?: correoOtro
-
-            val chatInfoKey = "chatinfo_${emailActual}_$correoOtro"
-            val rawChatInfo = sharedPref.getString(chatInfoKey, null)
-
-            var ultimoMensaje = ""
-            var timestamp = 0L
-
-            if (rawChatInfo != null) {
-                val parts = rawChatInfo.split("|")
-                if (parts.size == 3) {
-                    ultimoMensaje = parts[1]
-                    timestamp = parts[2].toLongOrNull() ?: 0L
-                }
+    private fun cargarChats(jwt: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                RetrofitClient.api.getChats("Bearer $jwt")
             }
 
-            listaChats.add(
-                ChatPreview(
-                    nombre = nombre,
-                    correo = correoOtro,
-                    ultimoMensaje = ultimoMensaje,
-                    timestamp = timestamp
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { response ->
+                        if (!response.isSuccessful) {
+                            mostrarError("Error al mandar la petición")
+                            return@fold
+                        }
+
+                        val data = response.body()?.data
+                        if (data == null) {
+                            mostrarError("Error al procesar los datos")
+                            return@fold
+                        }
+
+                        // Convertimos la lista
+                        val listaChats = data.map { chatSummary ->
+                            ChatSummaryToChatPreview(chatSummary)
+                        }.sortedByDescending { it.timestamp }
+
+                        listaChatsOriginal = listaChats
+
+                        configurarAdapter(listaChats)
+                    },
+
+                    onFailure = {
+                        mostrarError("Error de conexión")
+                    }
                 )
-            )
+            }
         }
+    }
 
-        val ordenados = listaChats.sortedByDescending { it.timestamp }
-        listaChatsOriginal = ordenados
+    private fun ChatSummaryToChatPreview(c: ChatSummary): ChatPreview{
+        return ChatPreview(
+            nombre = c.otherUser.name,
+            id = c.id,
+            ultimoMensaje = c.lastMessage?.content.orEmpty(),
+            timestamp = parseTimeStamp(c.lastMessage?.timestamp)
+        )
+    }
 
+    // TODO: no se maneja timezone en ningun lado de la app
+    private fun parseTimeStamp(timestamp: String?): Long {
+        if (timestamp == null) return  0L
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+
+        return sdf.parse(timestamp)?.time ?: 0L
+    }
+
+    private fun mostrarError(msg: String) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun configurarAdapter(lista: List<ChatPreview>) {
         adapter = ChatAdapter(
-            ordenados,
+            lista,
             onClick = { chat ->
                 val intent = Intent(this, ChatActivity::class.java)
-                intent.putExtra("emailOtro", chat.correo)
+                intent.putExtra("chat_id", chat.id)
                 intent.putExtra("nombreOtro", chat.nombre)
                 startActivity(intent)
             },
-            onLongClick = { chat ->
-                eliminarConversacion(chat.correo)
-                Toast.makeText(this, "Chat eliminado", Toast.LENGTH_SHORT).show()
-                cargarListaChats()
-            }
         )
 
         rvChats.adapter = adapter
     }
+
+// DEPRECATED: no se pueden eliminar conversaciones
     private fun eliminarConversacion(emailOtro: String) {
         val key1 = "chat_${emailActual}_${emailOtro}"
         val key2 = "chat_${emailOtro}_${emailActual}"
