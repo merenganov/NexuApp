@@ -1,5 +1,6 @@
 package com.example.nexu
 
+import ChatAdapter
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
@@ -142,7 +143,16 @@ class MessagesActivity : AppCompatActivity() {
             id = c.id,
             ultimoMensaje = c.lastMessage?.content.orEmpty(),
             timestamp = parseTimeStamp(c.lastMessage?.timestamp),
-            fotoPerfilUrl = c.otherUser.avatarUrl ?:""
+            fotoPerfilUrl = when {
+                c.otherUser.avatarUrl.isNullOrBlank() -> ""
+
+                c.otherUser.avatarUrl.startsWith("http") ->
+                    c.otherUser.avatarUrl   // URL completa (Cloudinary)
+
+                else ->
+                    RetrofitClient.getBaseUrl() + c.otherUser.avatarUrl // URL relativa
+            }
+
         )
     }
 
