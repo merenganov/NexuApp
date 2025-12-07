@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
@@ -32,6 +33,8 @@ class HomeActivity : AppCompatActivity() {
         ThemeManager.applyThemeBackground(this, findViewById(android.R.id.content))
 
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
+        cargarNombreUsuario()
+
 
         jwtToken = sharedPref.getString("token", "") ?: ""
         currentUserId = sharedPref.getString("user_id", "") ?: ""
@@ -230,4 +233,30 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, ProfileActivity::class.java)); finish()
         }
     }
+    private fun cargarNombreUsuario() {
+        val token = sharedPref.getString("token", null) ?: return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = RetrofitClient.api.getUserProfile("Bearer $token")
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        val profile = response.body()?.data
+                        val nombre = profile?.name ?: "Usuario"
+                        findViewById<TextView>(R.id.welcomeText).text =
+                            "Bienvenido, $nombre!"
+                    } else {
+                        findViewById<TextView>(R.id.welcomeText).text = "Bienvenido!"
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    findViewById<TextView>(R.id.welcomeText).text = "Bienvenido!"
+                }
+            }
+        }
+    }
+
 }

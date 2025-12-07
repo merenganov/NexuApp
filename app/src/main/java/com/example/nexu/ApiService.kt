@@ -186,7 +186,8 @@ interface ApiService {
 
 object RetrofitClient {
     // Cambia esto por la URL de tu backend
-    private const val BASE_URL = "http://192.168.1.15:5000/"
+    private const val BASE_URL = "http://192.168.0.23:5000/"
+
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
