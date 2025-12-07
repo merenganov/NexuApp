@@ -9,9 +9,12 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.nexu.sockets.SocketManager
 import kotlinx.coroutines.*
+
 
 class HomeActivity : AppCompatActivity() {
 
@@ -41,6 +44,12 @@ class HomeActivity : AppCompatActivity() {
             finish()
             return
         }
+
+        // Inicializamos el socket
+        lifecycleScope.launch(Dispatchers.IO) {
+            SocketManager.initialize(applicationContext, jwtToken)
+        }
+
 
         // Navegación inferior
         initBottomNav()

@@ -3,6 +3,7 @@ package com.example.nexu
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
@@ -10,8 +11,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.nexu.sockets.SocketEventBus
+import com.example.nexu.sockets.toNewNotification
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,6 +66,8 @@ class ChatActivity : AppCompatActivity() {
 
         // Cargar mensajes previos si los hay
         cargarMensajes(jwt, chat_id)
+        // Cargar Eventos de sockets
+        observeSocketsEvents()
 
         // Botón enviar
         findViewById<ImageButton>(R.id.btnEnviar).setOnClickListener {
@@ -72,6 +78,27 @@ class ChatActivity : AppCompatActivity() {
             finish()
         }
 
+    }
+
+    // RECEPCION DE EVENTOS DE SOCKETS
+    private fun observeSocketsEvents(){
+        Log.i("SOCKET", "Setteando listeners de sockets")
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                SocketEventBus.events.collect { event ->
+                    Log.i("SOCKET", "Llego el siguiente evento: ${event.name}")
+                    Log.i("SOCKET", "Con la siguiente data: ${event.data}")
+                    event.toNewNotification()?.let { notificationPayload ->
+                        Log.i("SOCKET", "Mensaje de: ${notificationPayload.sender_name}")
+                        Log.i("SOCKET", "Mensaje: ${notificationPayload.message}")
+                    }
+//                    Parsear el json a datos
+//                    Crear el objeto mensaje
+//                    Guardarlo en la lista
+//                    Llamar a actualizar recycler
+                }
+            }
+        }
     }
 
     // ============================================================

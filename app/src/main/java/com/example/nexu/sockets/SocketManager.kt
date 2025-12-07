@@ -1,6 +1,7 @@
-package com.example.nexu.network
+package com.example.nexu.sockets
 
 import android.content.Context
+import android.util.Log
 import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.CoroutineScope
@@ -9,8 +10,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import org.json.JSONObject
 import java.net.URISyntaxException
 
@@ -36,26 +35,8 @@ import java.net.URISyntaxException
  *      }
  */
 
-/** Simple event container used by the SharedFlow bus. */
-data class SocketEvent(
-    val name: String,
-    val data: String
-)
 
-/** Global event bus backed by a MutableSharedFlow */
-object SocketEventBus {
-    // No replay, buffered to avoid drops for short bursts; overflow drops oldest
-    private val _events = MutableSharedFlow<SocketEvent>(
-        replay = 0,
-        extraBufferCapacity = 64
-    )
 
-    val events = _events.asSharedFlow()
-
-    internal fun tryEmit(event: SocketEvent) {
-        _events.tryEmit(event)
-    }
-}
 
 object SocketManager {
     private var socket: Socket? = null
@@ -69,7 +50,8 @@ object SocketManager {
     private val initMutex = Mutex()
 
     /** Initialize the socket manager once per app session. Safe to call multiple times. */
-    suspend fun initialize(context: Context, jwt: String, baseUrl: String) {
+    suspend fun initialize(context: Context, jwt: String) {
+        val baseUrl = "http://10.0.2.2:5000/"
         initMutex.withLock {
             if (initialized) return
             appContext = context.applicationContext
@@ -80,8 +62,10 @@ object SocketManager {
             }
 
             try {
+                Log.i("SOCKET", "Conexion al socket exitosa")
                 socket = IO.socket(baseUrl, opts)
             } catch (e: URISyntaxException) {
+                Log.i("SOCKET", "Conexion al socket fallida")
                 e.printStackTrace()
                 return
             }
