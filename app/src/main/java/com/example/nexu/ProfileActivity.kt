@@ -50,7 +50,7 @@ class ProfileActivity : AppCompatActivity() {
         api = RetrofitClient.api
 
         jwtToken = sharedPref.getString("token", "") ?: ""
-        currentUserId = sharedPref.getString("currentUserId", "") ?: ""
+        currentUserId = sharedPref.getString("user_id", "") ?: ""
 
         if (jwtToken.isEmpty()) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -234,31 +234,30 @@ class ProfileActivity : AppCompatActivity() {
     // =================================================================
     private fun cargarMisPosts() {
         lifecycleScope.launch(Dispatchers.IO) {
-
             try {
                 val res = api.getPosts("Bearer $jwtToken")
 
-                if (!res.isSuccessful) return@launch
+                if (!res.isSuccessful) {
+                    return@launch
+                }
 
                 val posts = res.body()?.data ?: emptyList()
 
-                val filtrados = posts.filter { it.user.id == currentUserId }
+                // FILTRA SOLO TUS POSTS
+                val misPosts = posts.filter { it.user.id == currentUserId }
 
                 withContext(Dispatchers.Main) {
-                    postAdapter.setPosts(filtrados)
+                    postAdapter.setPosts(misPosts)
                 }
 
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@ProfileActivity,
-                        "Error: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(this@ProfileActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
     }
+
 
 
     // =================================================================

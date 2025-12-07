@@ -78,7 +78,6 @@ data class SignupRequest(
 data class UserProfile(
     val id: String,
     val name: String,
-    val email: String,
     val career: String?,
     val bio: String?,
     val date_of_birth: String?,
@@ -86,6 +85,7 @@ data class UserProfile(
     val tags: List<String>?,
     val avatar_url: String?
 )
+
 data class UserProfileResponse(
     val data: UserProfile
 )

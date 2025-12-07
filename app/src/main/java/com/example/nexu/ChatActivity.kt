@@ -53,7 +53,7 @@ class ChatActivity : AppCompatActivity() {
         // Usuario actual
         emailActual = sharedPref.getString("currentUser", "") ?: ""
 
-        current_user_id = sharedPref.getString("currentUserId", "") ?: ""
+        current_user_id = sharedPref.getString("user_id", "") ?: ""
 
         val jwt = sharedPref.getString("token", "") ?: ""
 

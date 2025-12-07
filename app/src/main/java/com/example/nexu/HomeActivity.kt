@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -14,7 +13,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.nexu.sockets.SocketManager
 import kotlinx.coroutines.*
-
 
 class HomeActivity : AppCompatActivity() {
 
@@ -45,6 +43,7 @@ class HomeActivity : AppCompatActivity() {
             return
         }
 
+        cargarNombreUsuario()
         // Inicializamos el socket
         lifecycleScope.launch(Dispatchers.IO) {
             SocketManager.initialize(applicationContext, jwtToken)
@@ -57,7 +56,6 @@ class HomeActivity : AppCompatActivity() {
         // RecyclerView
         rvFeed = findViewById(R.id.rvFeed)
         rvFeed.layoutManager = LinearLayoutManager(this)
-
         postAdapter = PostAdapter(
             this,
             listaGlobal,
@@ -73,10 +71,9 @@ class HomeActivity : AppCompatActivity() {
                 }
             }
         )
-
         rvFeed.adapter = postAdapter
 
-        // Botón para publicar
+        // NUEVA PUBLICACIÓN
         findViewById<EditText>(R.id.newPostInput).setOnClickListener {
             abrirDialogNuevaPublicacionHome()
         }
@@ -97,25 +94,32 @@ class HomeActivity : AppCompatActivity() {
     // OBTENER FEED GLOBAL DESDE EL BACKEND
     // ============================================================
     private fun cargarFeedGlobal() {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = api.getPosts("Bearer $jwtToken")
 
                 if (response.isSuccessful) {
                     listaGlobal = response.body()?.data?.toMutableList() ?: mutableListOf()
-                    postAdapter.setPosts(listaGlobal)
+
+                    withContext(Dispatchers.Main) {
+                        postAdapter.setPosts(listaGlobal)
+                    }
                 } else {
-                    Toast.makeText(this@HomeActivity, "Error en servidor", Toast.LENGTH_SHORT).show()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@HomeActivity, "Error en servidor", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(this@HomeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@HomeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
 
     // ============================================================
-    // FILTRO DE BUSQUEDA POR TAGS
+    // FILTRO DE BUSQUEDA POR TAGS O DESCRIPCIÓN
     // ============================================================
     private fun filtrarBuscador(query: String) {
         if (query.isBlank()) {
@@ -132,50 +136,51 @@ class HomeActivity : AppCompatActivity() {
     }
 
     // ============================================================
-    // PUBLICAR DESDE HOME (CON TAGS REALES)
+    // CREAR PUBLICACIÓN DESDE HOME
     // ============================================================
     private fun abrirDialogNuevaPublicacionHome() {
 
         val view = layoutInflater.inflate(R.layout.dialog_create_post, null)
-        val spinner = view.findViewById<Spinner>(R.id.spinnerTags)
+        val spinnerTags = view.findViewById<Spinner>(R.id.spinnerTags)
         val edtDesc = view.findViewById<EditText>(R.id.edtDescripcionPost)
 
-        CoroutineScope(Dispatchers.Main).launch {
-
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val response = api.getTags("Bearer $jwtToken")
+                val res = api.getTags("Bearer $jwtToken")
 
-                if (response.isSuccessful) {
-                    val tags = response.body()?.data ?: emptyList()
-                    val nombres = tags.map { it.name }
+                if (res.isSuccessful) {
+                    val tags = res.body()?.data ?: emptyList()
 
-                    val adapter = ArrayAdapter(
-                        this@HomeActivity,
-                        android.R.layout.simple_spinner_dropdown_item,
-                        nombres
-                    )
-                    spinner.adapter = adapter
+                    withContext(Dispatchers.Main) {
+                        spinnerTags.adapter = ArrayAdapter(
+                            this@HomeActivity,
+                            android.R.layout.simple_spinner_dropdown_item,
+                            tags.map { it.name }
+                        )
 
-                    AlertDialog.Builder(this@HomeActivity)
-                        .setTitle("Nueva publicación")
-                        .setView(view)
-                        .setPositiveButton("Publicar") { _, _ ->
+                        AlertDialog.Builder(this@HomeActivity)
+                            .setTitle("Nueva publicación")
+                            .setView(view)
+                            .setPositiveButton("Publicar") { _, _ ->
 
-                            val desc = edtDesc.text.toString().trim()
-                            if (desc.isBlank()) {
-                                Toast.makeText(this@HomeActivity, "Escribe algo", Toast.LENGTH_SHORT).show()
-                                return@setPositiveButton
+                                val desc = edtDesc.text.toString().trim()
+                                if (desc.isBlank()) {
+                                    Toast.makeText(this@HomeActivity, "Escribe algo...", Toast.LENGTH_SHORT).show()
+                                    return@setPositiveButton
+                                }
+
+                                val tagId = tags[spinnerTags.selectedItemPosition].id
+                                crearPost(tagId, desc)
                             }
-
-                            val tagSeleccionado = tags[spinner.selectedItemPosition]
-                            crearPost(tagSeleccionado.id, desc)
-                        }
-                        .setNegativeButton("Cancelar", null)
-                        .show()
+                            .setNegativeButton("Cancelar", null)
+                            .show()
+                    }
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(this@HomeActivity, "Error cargando tags", Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@HomeActivity, "Error cargando tags", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -184,16 +189,19 @@ class HomeActivity : AppCompatActivity() {
     // CREAR POST (BACKEND)
     // ============================================================
     private fun crearPost(tagId: String, desc: String) {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val response = api.createPost("Bearer $jwtToken", CreatePostRequest(tagId, desc))
+                val body = CreatePostRequest(tag_id = tagId, description = desc)
+                val res = api.createPost("Bearer $jwtToken", body)
 
-                if (response.isSuccessful) {
+                if (res.isSuccessful) {
                     cargarFeedGlobal()
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(this@HomeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@HomeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -213,23 +221,28 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun eliminarPost(post: Post) {
-        CoroutineScope(Dispatchers.Main).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val response = api.deletePost("Bearer $jwtToken", post.id)
 
                 if (response.isSuccessful) {
                     listaGlobal.remove(post)
-                    postAdapter.removePostById(post.id)
+
+                    withContext(Dispatchers.Main) {
+                        postAdapter.removePostById(post.id)
+                    }
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(this@HomeActivity, "Error eliminando", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@HomeActivity, "Error eliminando", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
 
     // ============================================================
-    // NAVEGACIÓN INFERIOR
+    // NAVEGACIÓN
     // ============================================================
     private fun initBottomNav() {
         findViewById<LinearLayout>(R.id.messagesection).setOnClickListener {
@@ -237,6 +250,31 @@ class HomeActivity : AppCompatActivity() {
         }
         findViewById<LinearLayout>(R.id.profileSection).setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java)); finish()
+        }
+    }
+
+    // ============================================================
+    // MOSTRAR NOMBRE EN EL HOME
+    // ============================================================
+    private fun cargarNombreUsuario() {
+        val token = sharedPref.getString("token", null) ?: return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val res = api.getUserProfile("Bearer $token")
+
+                withContext(Dispatchers.Main) {
+                    if (res.isSuccessful) {
+                        val nombre = res.body()?.data?.name ?: "Usuario"
+                        findViewById<TextView>(R.id.welcomeText).text = "Bienvenido, $nombre!"
+                    }
+                }
+
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    findViewById<TextView>(R.id.welcomeText).text = "Bienvenido!"
+                }
+            }
         }
     }
 }
