@@ -22,6 +22,7 @@ import com.example.nexu.sockets.toNewNotification
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -30,12 +31,13 @@ class ChatActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
     private lateinit var emailActual: String
-//    TODO: quitar emailOtro, no se va a usar
-    private lateinit var emailOtro: String
+
+    private lateinit var other_id: String
 
     private lateinit var chat_id: String
     private lateinit var current_user_id: String
 
+    private var isFirst: Boolean = false
     private lateinit var recyclerMensajes: RecyclerView
     private var listaMensajes = mutableListOf<Mensaje>()
 
@@ -55,9 +57,14 @@ class ChatActivity : AppCompatActivity() {
 
         val jwt = sharedPref.getString("token", "") ?: ""
 
-        // Datos del Chat
+
+        // Datos del Chat: si es first chat, no encontrara chat_id pero si other_id, y viceversa si firt chat es false
+        isFirst = intent.getBooleanExtra("ifFirst", false)
+
         chat_id  = intent.getStringExtra("chat_id") ?: ""
-        emailOtro = intent.getStringExtra("emailOtro") ?: ""    // ESTO ES DONDE VA A ROMPER RN
+        other_id = intent.getStringExtra("other_id") ?: ""
+
+
         val nombreOtro = intent.getStringExtra("nombreOtro") ?: ""
 
         // Mostrar nombre arriba
@@ -124,18 +131,25 @@ class ChatActivity : AppCompatActivity() {
         val mensaje = Mensaje(
             texto = texto,
             autor = current_user_id,
-            receptor = emailOtro,
+            receptor = other_id,
             timestamp = System.currentTimeMillis()
         )
 
         listaMensajes.add(mensaje)
+        if(isFirst){
+            val payload = SendMessagePayload(
+                target_id = other_id,    // ESTO ESTA MAL, TIENE QUE SER EL ID DEL OTRO USER
+                content = texto
+            ).toJson()
+            SocketManager.emit("start_chat", payload)
+        }else{
+            val payload = SendMessagePayload(
+                target_id = chat_id,
+                content = texto
+            ).toJson()
 
-        val payload = SendMessagePayload(
-            target_id = chat_id,
-            content = texto
-        ).toJson()
-
-        SocketManager.emit("dm", payload)
+            SocketManager.emit("dm", payload)
+        }
 
         edtMensaje.setText("")
         actualizarRecycler()
