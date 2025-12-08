@@ -51,7 +51,7 @@ object SocketManager {
 
     /** Initialize the socket manager once per app session. Safe to call multiple times. */
     suspend fun initialize(context: Context, jwt: String) {
-        val baseUrl = "http://192.168.0.23:5000/"
+        val baseUrl = "http://192.168.1.6:5000/"
         initMutex.withLock {
             if (initialized) return
             appContext = context.applicationContext
