@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.nexu.databinding.ActivityHomeBinding
 import com.example.nexu.sockets.SocketManager
 import kotlinx.coroutines.*
 
@@ -26,9 +27,12 @@ class HomeActivity : AppCompatActivity() {
 
     private val api = RetrofitClient.api
 
+    private lateinit var b: ActivityHomeBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_home)
+        b = ActivityHomeBinding.inflate(layoutInflater)
+        setContentView(b.root)
 
         ThemeManager.applyThemeBackground(this, findViewById(android.R.id.content))
 
@@ -54,7 +58,7 @@ class HomeActivity : AppCompatActivity() {
         initBottomNav()
 
         // RecyclerView
-        rvFeed = findViewById(R.id.rvFeed)
+        rvFeed = b.rvFeed
         rvFeed.layoutManager = LinearLayoutManager(this)
         postAdapter = PostAdapter(
             this,
@@ -77,12 +81,12 @@ class HomeActivity : AppCompatActivity() {
         rvFeed.adapter = postAdapter
 
         // NUEVA PUBLICACIÓN
-        findViewById<EditText>(R.id.newPostInput).setOnClickListener {
+       b.newPostInput.setOnClickListener {
             abrirDialogNuevaPublicacionHome()
         }
 
         // Buscador
-        findViewById<EditText>(R.id.searchInput).addTextChangedListener(object : TextWatcher {
+       b.searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 filtrarBuscador(s.toString())

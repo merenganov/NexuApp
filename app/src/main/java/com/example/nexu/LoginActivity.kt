@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import android.content.SharedPreferences
 import androidx.lifecycle.lifecycleScope
+import com.example.nexu.databinding.ActivityLoginBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -16,25 +17,28 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var sharedPref: SharedPreferences
 
+    private lateinit var b : ActivityLoginBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
+        b = ActivityLoginBinding.inflate(layoutInflater)
+        setContentView(b.root)
 
         // === Referencias a los elementos del layout ===
-        val signinButton: Button = findViewById(R.id.signinButton)
-        val loginButton: Button = findViewById(R.id.loginButton)
-        val emailInput: EditText = findViewById(R.id.emailInput)
-        val passwordInput: EditText = findViewById(R.id.passwordInput)
+        val signinButton: Button = b.signinButton
+        val loginButton:Button = b.loginButton
+        val emailInput: EditText = b.emailInput
+        val passwordInput: EditText = b.passwordInput
 
         // SharedPreferences para guardar token y usuario
         sharedPref = getSharedPreferences("NexuUsers", MODE_PRIVATE)
 
-        // === BOTÓN PARA IR A CREAR CUENTA ===
+
         signinButton.setOnClickListener {
             startActivity(Intent(this, CreateAccountActivity::class.java))
         }
 
-        // === BOTÓN LOGIN QUE AHORA LLAMA AL BACKEND ===
+
         loginButton.setOnClickListener {
             val email = emailInput.text.toString().trim()
             val password = passwordInput.text.toString().trim()
@@ -46,7 +50,7 @@ class LoginActivity : AppCompatActivity() {
 
             hacerLogin(email, password)
         }
-        val btnGoogle = findViewById<Button>(R.id.btnGoogle)
+        val btnGoogle = b.btnGoogle
 
         btnGoogle.setOnClickListener {
             Toast.makeText(this, "Próximamente: Login con Google", Toast.LENGTH_SHORT).show()
@@ -93,7 +97,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     // ================================================================
-    // OBTENER PERFIL REAL (AQUÍ LLEGA EL user.id)
+    // OBTENER PERFIL REAL
     // ================================================================
     private fun obtenerPerfilDespuesDeLogin(token: String, email: String) {
 

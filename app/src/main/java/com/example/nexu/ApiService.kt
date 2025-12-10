@@ -189,7 +189,7 @@ interface ApiService {
 
 object RetrofitClient {
     // Cambia esto por la URL de tu backend
-    const val BASE_URL = "http://192.168.0.23:5000/"
+    const val BASE_URL = "http://10.0.2.2:5000/"
 
     fun getBaseUrl(): String = BASE_URL
 
